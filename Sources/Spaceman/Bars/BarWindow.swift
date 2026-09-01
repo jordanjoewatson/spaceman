@@ -1,11 +1,16 @@
 import AppKit
 import SwiftUI
+import SpacemanCore
 
 enum BarEdge {
     case top, bottom
 }
 
-/// A borderless panel pinned to the top or bottom of a screen's *visible* area.
+/// A borderless panel pinned to the top or bottom of a screen.
+///
+/// Flush top bars on a notched display sit on `screen.frame` so they fill the
+/// ears either side of the camera; everything else uses `visibleFrame` (menu
+/// bar and Dock already subtracted). See `BarPlacement`.
 ///
 /// Everything here is Tier-1 API — an app arranging its own windows is never
 /// restricted, sandboxed or not. `.canJoinAllSpaces` is what makes the bar
@@ -86,20 +91,16 @@ final class BarWindow: NSPanel {
         router.scroll(delta: delta, atX: event.locationInWindow.x)
     }
 
-    /// Lay the bar along `edge` of the screen's visible area.
+    /// Lay the bar along `edge` of the screen.
     func reposition(on screen: NSScreen) {
         displayID = screen.displayID
-        let visible = screen.visibleFrame
-        let width = visible.width - margin * 2
-        let frame: CGRect
-        switch edge {
-        case .top:
-            frame = CGRect(x: visible.minX + margin, y: visible.maxY - thickness - margin,
-                           width: width, height: thickness)
-        case .bottom:
-            frame = CGRect(x: visible.minX + margin, y: visible.minY + margin,
-                           width: width, height: thickness)
-        }
+        let frame = BarPlacement.windowFrame(
+            edge: edge == .top ? .top : .bottom,
+            screenFrame: screen.frame,
+            visibleFrame: screen.visibleFrame,
+            safeAreaTop: screen.safeAreaInsets.top,
+            thickness: thickness,
+            margin: margin)
         restingFrame = frame
 
         // Don't yank a hidden bar back on screen just because the display

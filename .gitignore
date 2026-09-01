@@ -1,0 +1,13 @@
+# SwiftPM / Xcode
+.build/
+.swiftpm/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+
+# Built app — ship via a GitHub Release, not the repo
+Spaceman.app/
+Spaceman.zip
+
+# macOS
+.DS_Store

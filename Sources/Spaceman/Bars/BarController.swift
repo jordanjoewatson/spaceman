@@ -4,11 +4,12 @@ import SpacemanCore
 
 /// Owns one top and one bottom bar per screen and keeps them positioned.
 ///
-/// Position is driven entirely by `NSScreen.visibleFrame`, which already
-/// excludes the menu bar and Dock — including when either is set to auto-hide.
-/// That is the public replacement for the `CGWindowListCopyWindowInfo` probing
-/// the Go implementation used: no Screen Recording consent, no private API, and
-/// it reacts correctly to display changes, Dock repositioning and notches.
+/// Placement is `BarPlacement`: `visibleFrame` for the Dock, menu bar, and
+/// floating bars; the full `screen.frame` for a flush top bar on a notched
+/// display so the ears either side of the camera are filled rather than left
+/// empty. Display changes, Dock repositioning and auto-hide still come from
+/// the public `NSScreen` notifications and a short poll — no Screen Recording
+/// consent, no private API.
 @MainActor
 final class BarController {
 
@@ -25,7 +26,7 @@ final class BarController {
     /// One router per bar: a scroll is delivered to the window it landed on, and
     /// that window's zones are the only candidates.
     private var routers: [ObjectIdentifier: ZoneScrollRouter] = [:]
-    private var lastVisibleFrames: [CGRect] = []
+    private var lastScreens: [ScreenSnapshot] = []
     /// Reveal state is per display: a pointer at the bottom edge of one screen
     /// hides only that screen's bottom bar.
     private var revealByDisplay: [CGDirectDisplayID: EdgeReveal] = [:]
@@ -119,34 +120,35 @@ final class BarController {
                                  context: context, on: screen)
             bottomBars.append(bottom)
         }
-        lastVisibleFrames = NSScreen.screens.map(\.visibleFrame)
+        lastScreens = NSScreen.screens.map(ScreenSnapshot.init)
         revealByDisplay = revealByDisplay.filter { entry in
             NSScreen.screens.contains { $0.displayID == entry.key }
         }
     }
 
     @objc private func screenParametersChanged() {
-        rebuildIfScreensChanged()
-        syncPositions()
-        onGeometryChange?()
+        applyScreenChange(NSScreen.screens.map(ScreenSnapshot.init))
     }
 
     /// A connected or disconnected display needs its bars created or torn down,
-    /// not just repositioned. Resolution/Dock changes keep the same screens and
-    /// are handled by `syncPositions` alone.
-    private func rebuildIfScreensChanged() {
-        guard NSScreen.screens.count != topBars.count else { return }
-        rebuild(onCycleLayout: onCycleLayout,
-                onRetile: onRetile,
-                onShrinkMaster: onShrinkMaster,
-                onGrowMaster: onGrowMaster)
+    /// not just repositioned. A change in the camera-strip height also needs a
+    /// rebuild: that thickness is baked into the window when it is created.
+    private func syncIfChanged() {
+        let current = NSScreen.screens.map(ScreenSnapshot.init)
+        guard current != lastScreens else { return }
+        applyScreenChange(current)
     }
 
-    private func syncIfChanged() {
-        let current = NSScreen.screens.map(\.visibleFrame)
-        guard current != lastVisibleFrames else { return }
-        lastVisibleFrames = current
-        rebuildIfScreensChanged()
+    private func applyScreenChange(_ current: [ScreenSnapshot]) {
+        let idsChanged = current.map(\.id) != lastScreens.map(\.id)
+        let notchChanged = current.map(\.safeTop) != lastScreens.map(\.safeTop)
+        lastScreens = current
+        if idsChanged || notchChanged || current.count != topBars.count {
+            rebuild(onCycleLayout: onCycleLayout,
+                    onRetile: onRetile,
+                    onShrinkMaster: onShrinkMaster,
+                    onGrowMaster: onGrowMaster)
+        }
         syncPositions()
         onGeometryChange?()
     }
@@ -177,38 +179,61 @@ final class BarController {
         }
     }
 
-    /// The area left for tiled windows on `screen`: the visible frame with both
-    /// bars carved out.
+    /// The area left for tiled windows on `screen`: the visible frame with any
+    /// bar that actually sits in it carved out.
     ///
-    /// Deliberately unaffected by the edge reveal. Giving the space back while a
-    /// bar is hidden would re-tile every window each time the pointer brushed an
-    /// edge, which is a far worse experience than a 26pt strip being briefly
-    /// unused.
+    /// A flush top bar on a notched display lives in the camera strip that
+    /// `visibleFrame` already excludes, so it contributes nothing here — we
+    /// must not subtract the same strip twice. Deliberately unaffected by the
+    /// edge reveal: giving the space back while a bar is hidden would re-tile
+    /// every window each time the pointer brushed an edge.
     func tilingArea(on screen: NSScreen) -> CGRect {
-        // Top and bottom can differ in height and in whether they float, so the
-        // two edges are subtracted independently rather than as one doubled
-        // thickness.
         let preset = preferences.activeBarPreset
         var area = screen.visibleFrame
-        area.origin.y += reserved(for: preset.bottom)
-        area.size.height -= reserved(for: preset.top) + reserved(for: preset.bottom)
+        let bottom = reserved(edge: .bottom, layout: preset.bottom, on: screen)
+        let top = reserved(edge: .top, layout: preset.top, on: screen)
+        area.origin.y += bottom
+        area.size.height -= top + bottom
         return area
     }
 
-    /// A floating bar also reserves the gap it floats in — leaving a window
-    /// under that gap would put it behind the bar's shadow.
-    private func reserved(for layout: BarLayout) -> CGFloat {
-        layout.height + (layout.floating ? Self.floatingMargin * 2 : 0)
+    /// How much of `visibleFrame` this bar occupies, plus the floating gap.
+    private func reserved(edge: BarPlacement.Edge, layout: BarLayout,
+                          on screen: NSScreen) -> CGFloat {
+        let thickness = BarPlacement.thickness(
+            edge: edge,
+            requested: CGFloat(layout.height),
+            floating: layout.floating,
+            safeAreaTop: screen.safeAreaInsets.top)
+        let frame = BarPlacement.windowFrame(
+            edge: edge,
+            screenFrame: screen.frame,
+            visibleFrame: screen.visibleFrame,
+            safeAreaTop: screen.safeAreaInsets.top,
+            thickness: thickness,
+            margin: layout.floating ? Self.floatingMargin : 0)
+        var used = BarPlacement.visibleHeightUsed(bar: frame, visibleFrame: screen.visibleFrame)
+        if layout.floating {
+            used += Self.floatingMargin * 2
+        }
+        return used
     }
 
     private func makeBar(edge: BarEdge, layout: BarLayout,
                          context: BarContext, on screen: NSScreen) -> BarWindow {
+        let placementEdge: BarPlacement.Edge = edge == .top ? .top : .bottom
+        let thickness = BarPlacement.thickness(
+            edge: placementEdge,
+            requested: CGFloat(layout.height),
+            floating: layout.floating,
+            safeAreaTop: screen.safeAreaInsets.top)
         let router = ZoneScrollRouter()
         let bar = BarWindow(edge: edge,
-                            thickness: layout.height,
+                            thickness: thickness,
                             margin: layout.floating ? Self.floatingMargin : 0,
                             router: router,
                             content: BarView(edge: edge,
+                                             barHeight: thickness,
                                              context: context,
                                              router: router,
                                              preferences: preferences,
@@ -252,5 +277,22 @@ private struct BarGeometrySignature: Equatable {
         topFloating = preset.top.floating
         bottomHeight = preset.bottom.height
         bottomFloating = preset.bottom.floating
+    }
+}
+
+/// Enough of an `NSScreen` to decide whether bars need a rebuild or just a
+/// nudge. `safeTop` is the camera-strip height; it is baked into window
+/// thickness, so a change there cannot be handled by `setFrame` alone.
+private struct ScreenSnapshot: Equatable {
+    var id: CGDirectDisplayID
+    var frame: CGRect
+    var visible: CGRect
+    var safeTop: CGFloat
+
+    init(_ screen: NSScreen) {
+        id = screen.displayID
+        frame = screen.frame
+        visible = screen.visibleFrame
+        safeTop = screen.safeAreaInsets.top
     }
 }

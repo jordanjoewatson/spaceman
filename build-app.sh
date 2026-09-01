@@ -165,6 +165,7 @@ cat > "$CONTENTS/Info.plist" <<PLIST
     <key>CFBundlePackageType</key>       <string>APPL</string>
     <key>CFBundleExecutable</key>        <string>Spaceman</string>
     <key>CFBundleIconFile</key>          <string>AppIcon</string>
+    <key>CFBundleIconName</key>          <string>AppIcon</string>
     <key>LSMinimumSystemVersion</key>    <string>14.0</string>
     <!-- Menu-bar agent: no Dock icon, no app-switcher entry. -->
     <key>LSUIElement</key>               <true/>
