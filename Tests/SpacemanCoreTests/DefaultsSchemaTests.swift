@@ -14,12 +14,12 @@ struct DefaultsSchemaTests {
     ]
     private let stringKeys: [DefaultsKey<String>] = [
         Defaults.defaultLayout,
-        Defaults.barPreset, Defaults.barCustomPresets,
+        Defaults.barPreset, Defaults.barCustomPresets, Defaults.barDisplayOffsets,
         Defaults.palette, Defaults.customPalettes,
         Defaults.appShortcuts,
     ]
     private let boolKeys: [DefaultsKey<Bool>] = [
-        Defaults.animationEnabled, Defaults.followMouse,
+        Defaults.animationEnabled, Defaults.followMouse, Defaults.barEdgeReveal,
     ]
 
     @Test("every declared key has a registered default")
@@ -107,6 +107,13 @@ struct DefaultsSchemaTests {
             #expect((try? JSONSerialization.jsonObject(with: data)) as? [Any] != nil,
                     "'\(key.name)' default is not a JSON array")
         }
+    }
+
+    @Test("display bar offsets default to an empty JSON object")
+    func displayOffsetsDefaultIsValid() {
+        let data = Data(Defaults.barDisplayOffsets.fallback.utf8)
+        #expect((try? JSONSerialization.jsonObject(with: data)) as? [String: Any] != nil,
+                "'\(Defaults.barDisplayOffsets.name)' default is not a JSON object")
     }
 
     @Test("individual theme roles are not registered")

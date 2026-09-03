@@ -92,7 +92,7 @@ final class BarWindow: NSPanel {
     }
 
     /// Lay the bar along `edge` of the screen.
-    func reposition(on screen: NSScreen) {
+    func reposition(on screen: NSScreen, offsetY: CGFloat = 0) {
         displayID = screen.displayID
         let frame = BarPlacement.windowFrame(
             edge: edge == .top ? .top : .bottom,
@@ -100,7 +100,8 @@ final class BarWindow: NSPanel {
             visibleFrame: screen.visibleFrame,
             safeAreaTop: screen.safeAreaInsets.top,
             thickness: thickness,
-            margin: margin)
+            margin: margin,
+            offsetY: offsetY)
         restingFrame = frame
 
         // Don't yank a hidden bar back on screen just because the display

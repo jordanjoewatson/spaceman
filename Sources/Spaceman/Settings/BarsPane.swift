@@ -12,6 +12,7 @@ struct BarsPane: View {
     @ObservedObject var preferences: Preferences
     @State private var selection: String?
     @State private var editingEdge: BarEdge = .top
+    @State private var displays: [NSScreen] = Self.currentScreens()
 
     private var store: PresetStore<BarPreset> { preferences.barPresets }
 
@@ -30,9 +31,15 @@ struct BarsPane: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .onAppear { selection = store.activeName }
+        .onAppear { displays = Self.currentScreens() }
         .onChange(of: selection) { _, name in
             // Selecting is applying — see PresetSidebar.
             if let name, name != store.activeName { store.activeName = name }
+        }
+        .onReceive(NotificationCenter.default.publisher(
+            for: NSApplication.didChangeScreenParametersNotification
+        )) { _ in
+            displays = Self.currentScreens()
         }
     }
 
@@ -60,6 +67,10 @@ struct BarsPane: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
+
+            edgeRevealToggle
+
+            offsetsSection
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
@@ -132,6 +143,48 @@ struct BarsPane: View {
         edge == .top ? selected.top : selected.bottom
     }
 
+    private var edgeRevealToggle: some View {
+        Toggle("Hide bars at screen edges", isOn: Binding(
+            get: { preferences[Defaults.barEdgeReveal] },
+            set: { preferences[Defaults.barEdgeReveal] = $0 }
+        ))
+        .help("Slide a bar out of the way when the pointer reaches the top or bottom of that display")
+    }
+
+    private var offsetsSection: some View {
+        GroupBox("Display offsets") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Positive values move a bar up. Negative values move it down.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                ForEach(displays, id: \.displayID) { screen in
+                    let offsets = preferences.barOffsets(for: screen.displayID)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text(screen.localizedName)
+                            Spacer()
+                            Button("Reset") {
+                                preferences.setBarOffset(0, for: screen.displayID, edge: .top)
+                                preferences.setBarOffset(0, for: screen.displayID, edge: .bottom)
+                            }
+                            .disabled(offsets == DisplayBarOffsets())
+                        }
+
+                        slider("Top", value: offsets.top, range: -200...200) { value in
+                            preferences.setBarOffset(value, for: screen.displayID, edge: .top)
+                        }
+                        slider("Bottom", value: offsets.bottom, range: -200...200) { value in
+                            preferences.setBarOffset(value, for: screen.displayID, edge: .bottom)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+            .padding(6)
+        }
+    }
+
     /// Apply a change to the bar being edited. Built-ins never reach here — the
     /// editor is disabled for them — so this only ever writes a custom preset.
     private func edit(_ change: (inout BarLayout) -> Void) {
@@ -143,6 +196,13 @@ struct BarsPane: View {
         }
         store.save(preset)
         selection = preset.name
+    }
+
+    private static func currentScreens() -> [NSScreen] {
+        NSScreen.screens.sorted {
+            if $0.frame.minX != $1.frame.minX { return $0.frame.minX < $1.frame.minX }
+            return $0.frame.minY < $1.frame.minY
+        }
     }
 }
 

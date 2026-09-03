@@ -27,6 +27,7 @@ final class BarController {
     /// that window's zones are the only candidates.
     private var routers: [ObjectIdentifier: ZoneScrollRouter] = [:]
     private var lastScreens: [ScreenSnapshot] = []
+    private var lastOffsetsJSON: String
     /// Reveal state is per display: a pointer at the bottom edge of one screen
     /// hides only that screen's bottom bar.
     private var revealByDisplay: [CGDirectDisplayID: EdgeReveal] = [:]
@@ -51,6 +52,7 @@ final class BarController {
         self.state = state
         self.preferences = preferences
         self.lastGeometry = BarGeometrySignature(preferences.activeBarPreset)
+        self.lastOffsetsJSON = preferences[Defaults.barDisplayOffsets]
         self.onCycleLayout = onCycleLayout
         self.onRetile = onRetile
         self.onShrinkMaster = onShrinkMaster
@@ -85,7 +87,7 @@ final class BarController {
         RunLoop.main.add(timer, forMode: .common)
         pollTimer = timer
 
-        preferences.observe { [weak self] in self?.presetGeometryChanged() }
+        preferences.observe { [weak self] in self?.preferencesChanged() }
     }
 
     deinit {
@@ -121,6 +123,7 @@ final class BarController {
             bottomBars.append(bottom)
         }
         lastScreens = NSScreen.screens.map(ScreenSnapshot.init)
+        lastOffsetsJSON = preferences[Defaults.barDisplayOffsets]
         revealByDisplay = revealByDisplay.filter { entry in
             NSScreen.screens.contains { $0.displayID == entry.key }
         }
@@ -155,8 +158,9 @@ final class BarController {
 
     private func syncPositions() {
         for (index, screen) in NSScreen.screens.enumerated() {
-            if index < topBars.count { topBars[index].reposition(on: screen) }
-            if index < bottomBars.count { bottomBars[index].reposition(on: screen) }
+            let offsets = preferences.barOffsets(for: screen.displayID)
+            if index < topBars.count { topBars[index].reposition(on: screen, offsetY: CGFloat(offsets.top)) }
+            if index < bottomBars.count { bottomBars[index].reposition(on: screen, offsetY: CGFloat(offsets.bottom)) }
         }
     }
 
@@ -164,7 +168,12 @@ final class BarController {
     /// covering whatever the user is reaching for — the menu bar above, the Dock
     /// below. Evaluated per display: the pointer can only be on one screen, and
     /// `EdgeReveal` restores a display's bars once the pointer has left it.
+    /// Off when `bar.edgeReveal` is false: bars stay put.
     private func updateEdgeReveal() {
+        guard preferences[Defaults.barEdgeReveal] else {
+            restoreRevealedBars()
+            return
+        }
         let pointer = NSEvent.mouseLocation
         for screen in NSScreen.screens {
             var reveal = revealByDisplay[screen.displayID] ?? EdgeReveal()
@@ -179,14 +188,22 @@ final class BarController {
         }
     }
 
-    /// The area left for tiled windows on `screen`: the visible frame with any
-    /// bar that actually sits in it carved out.
+    /// Bring every bar back after auto-hide is turned off, or a display goes away.
+    private func restoreRevealedBars() {
+        guard !revealByDisplay.isEmpty else { return }
+        revealByDisplay.removeAll()
+        for bar in topBars { bar.setHiddenAtEdge(false) }
+        for bar in bottomBars { bar.setHiddenAtEdge(false) }
+    }
+
+    /// The area left for tiled windows on `screen`: from the inner edge of the
+    /// bottom bar to the inner edge of the top bar, still clamped to
+    /// `visibleFrame` so windows never enter the Dock or system menu bar.
     ///
-    /// A flush top bar on a notched display lives in the camera strip that
-    /// `visibleFrame` already excludes, so it contributes nothing here — we
-    /// must not subtract the same strip twice. Deliberately unaffected by the
-    /// edge reveal: giving the space back while a bar is hidden would re-tile
-    /// every window each time the pointer brushed an edge.
+    /// Offsets are included because the bar's actual frame is what tiles
+    /// against. Deliberately unaffected by the edge reveal: giving the space
+    /// back while a bar is hidden would re-tile every window each time the
+    /// pointer brushed an edge.
     func tilingArea(on screen: NSScreen) -> CGRect {
         let preset = preferences.activeBarPreset
         var area = screen.visibleFrame
@@ -197,7 +214,7 @@ final class BarController {
         return area
     }
 
-    /// How much of `visibleFrame` this bar occupies, plus the floating gap.
+    /// How far `visibleFrame` is inset to the bar's inner edge.
     private func reserved(edge: BarPlacement.Edge, layout: BarLayout,
                           on screen: NSScreen) -> CGFloat {
         let thickness = BarPlacement.thickness(
@@ -211,12 +228,10 @@ final class BarController {
             visibleFrame: screen.visibleFrame,
             safeAreaTop: screen.safeAreaInsets.top,
             thickness: thickness,
-            margin: layout.floating ? Self.floatingMargin : 0)
-        var used = BarPlacement.visibleHeightUsed(bar: frame, visibleFrame: screen.visibleFrame)
-        if layout.floating {
-            used += Self.floatingMargin * 2
-        }
-        return used
+            margin: layout.floating ? Self.floatingMargin : 0,
+            offsetY: offset(for: edge, displayID: screen.displayID))
+        return BarPlacement.visibleInset(edge: edge, bar: frame,
+                                         visibleFrame: screen.visibleFrame)
     }
 
     private func makeBar(edge: BarEdge, layout: BarLayout,
@@ -239,9 +254,18 @@ final class BarController {
                                              preferences: preferences,
                                              state: state))
         routers[ObjectIdentifier(bar)] = router
-        bar.reposition(on: screen)
+        bar.reposition(on: screen, offsetY: offset(for: placementEdge, displayID: screen.displayID))
         bar.orderFront(nil)
         return bar
+    }
+
+    private func offset(for edge: BarPlacement.Edge,
+                        displayID: CGDirectDisplayID) -> CGFloat {
+        let offsets = preferences.barOffsets(for: displayID)
+        switch edge {
+        case .top:    return CGFloat(offsets.top)
+        case .bottom: return CGFloat(offsets.bottom)
+        }
     }
 
     /// What a floating bar insets from the screen edges. A named constant rather
@@ -252,6 +276,17 @@ final class BarController {
     /// A preset change alters bar geometry, which is fixed at construction, so
     /// the windows are rebuilt and the tiler re-run against the area that leaves.
     /// Every other preference reaches the bars through SwiftUI.
+    private func preferencesChanged() {
+        let offsetsJSON = preferences[Defaults.barDisplayOffsets]
+        if offsetsJSON != lastOffsetsJSON {
+            lastOffsetsJSON = offsetsJSON
+            syncPositions()
+            onGeometryChange?()
+        }
+
+        presetGeometryChanged()
+    }
+
     private func presetGeometryChanged() {
         let signature = BarGeometrySignature(preferences.activeBarPreset)
         guard signature != lastGeometry else { return }

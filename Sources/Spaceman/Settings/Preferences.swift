@@ -160,6 +160,33 @@ final class Preferences: ObservableObject {
         set { self[Defaults.appShortcuts] = AppShortcut.encodeList(newValue) }
     }
 
+    /// Per-display vertical nudges for the top and bottom bars.
+    var barDisplayOffsets: [String: DisplayBarOffsets] {
+        get { DisplayBarOffsetStore.decode(self[Defaults.barDisplayOffsets]) }
+        set { self[Defaults.barDisplayOffsets] = DisplayBarOffsetStore.encode(newValue) }
+    }
+
+    func barOffsets(for displayID: CGDirectDisplayID) -> DisplayBarOffsets {
+        barDisplayOffsets[String(displayID)] ?? DisplayBarOffsets()
+    }
+
+    func setBarOffset(_ value: Double, for displayID: CGDirectDisplayID,
+                      edge: BarPlacement.Edge) {
+        var all = barDisplayOffsets
+        var offsets = all[String(displayID)] ?? DisplayBarOffsets()
+        let clamped = min(max(value, -200), 200)
+        switch edge {
+        case .top:    offsets.top = clamped
+        case .bottom: offsets.bottom = clamped
+        }
+        if offsets == DisplayBarOffsets() {
+            all.removeValue(forKey: String(displayID))
+        } else {
+            all[String(displayID)] = offsets
+        }
+        barDisplayOffsets = all
+    }
+
 }
 
 /// The bar's background material, as a name that survives a round trip through

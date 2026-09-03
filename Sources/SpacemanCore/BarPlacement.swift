@@ -33,7 +33,8 @@ public enum BarPlacement {
                                    visibleFrame: CGRect,
                                    safeAreaTop: CGFloat,
                                    thickness: CGFloat,
-                                   margin: CGFloat) -> CGRect {
+                                   margin: CGFloat,
+                                   offsetY: CGFloat = 0) -> CGRect {
         let width: CGFloat
         let x: CGFloat
         let y: CGFloat
@@ -43,16 +44,16 @@ public enum BarPlacement {
                 // Physical top, full display width — the same strip the system
                 // menu bar uses, including the ears either side of the camera.
                 x = screenFrame.minX
-                y = screenFrame.maxY - thickness
+                y = screenFrame.maxY - thickness + offsetY
                 width = screenFrame.width
             } else {
                 x = visibleFrame.minX + margin
-                y = visibleFrame.maxY - thickness - margin
+                y = visibleFrame.maxY - thickness - margin + offsetY
                 width = visibleFrame.width - margin * 2
             }
         case .bottom:
             x = visibleFrame.minX + margin
-            y = visibleFrame.minY + margin
+            y = visibleFrame.minY + margin + offsetY
             width = visibleFrame.width - margin * 2
         }
         return CGRect(x: x, y: y, width: width, height: thickness)
@@ -66,6 +67,21 @@ public enum BarPlacement {
         let overlap = bar.intersection(visibleFrame)
         guard !overlap.isNull, !overlap.isInfinite else { return 0 }
         return overlap.height
+    }
+
+    /// Distance from the visible edge to the bar's inner edge — the strip
+    /// tiled windows must not use.
+    ///
+    /// A bar that has been offset into the desktop reserves everything from
+    /// the visible edge through to that inner edge, not just its own height.
+    /// A bar that sits entirely in the menu-bar / notch strip, or has been
+    /// pushed out past the Dock, contributes nothing: tiling must not expand
+    /// into the Dock or under the system menu bar.
+    public static func visibleInset(edge: Edge, bar: CGRect, visibleFrame: CGRect) -> CGFloat {
+        switch edge {
+        case .top:    return max(0, visibleFrame.maxY - bar.minY)
+        case .bottom: return max(0, bar.maxY - visibleFrame.minY)
+        }
     }
 
     /// The camera housing in bar-local coordinates, or nil when there is none.

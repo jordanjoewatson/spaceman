@@ -72,6 +72,10 @@ public enum Defaults {
     /// from a script. Height, material and everything else about a bar lives
     /// inside the preset, which is why there are no separate keys for them.
     public static let barCustomPresets = DefaultsKey<String>("bar.customPresets", "[]")
+    /// Per-display vertical bar offsets, keyed by CoreGraphics display ID.
+    public static let barDisplayOffsets = DefaultsKey<String>("bar.displayOffsets", "{}")
+    /// Slide a bar out of the way when the pointer hits that screen edge.
+    public static let barEdgeReveal = DefaultsKey<Bool>("bar.edgeReveal", true)
 
     // MARK: - Palette
 
@@ -107,6 +111,8 @@ public enum Defaults {
             animationDuration.name: animationDuration.fallback,
             barPreset.name: barPreset.fallback,
             barCustomPresets.name: barCustomPresets.fallback,
+            barDisplayOffsets.name: barDisplayOffsets.fallback,
+            barEdgeReveal.name: barEdgeReveal.fallback,
             palette.name: palette.fallback,
             customPalettes.name: customPalettes.fallback,
             appShortcuts.name: appShortcuts.fallback,

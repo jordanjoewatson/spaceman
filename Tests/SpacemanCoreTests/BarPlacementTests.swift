@@ -98,6 +98,69 @@ struct BarPlacementTests {
         #expect(frame.height == 26)
     }
 
+    @Test("vertical offsets move the bar in screen coordinates")
+    func offsetsShiftY() {
+        let top = BarPlacement.windowFrame(
+            edge: .top,
+            screenFrame: externalFrame,
+            visibleFrame: externalVisible,
+            safeAreaTop: 0,
+            thickness: 26,
+            margin: 0,
+            offsetY: -12)
+        #expect(top.maxY == externalVisible.maxY - 12)
+
+        let bottom = BarPlacement.windowFrame(
+            edge: .bottom,
+            screenFrame: externalFrame,
+            visibleFrame: externalVisible,
+            safeAreaTop: 0,
+            thickness: 26,
+            margin: 0,
+            offsetY: 18)
+        #expect(bottom.minY == externalVisible.minY + 18)
+    }
+
+    @Test("tiling starts at the bar's inner edge, including any offset")
+    func tilingFollowsOffsetBar() {
+        let topDown = BarPlacement.windowFrame(
+            edge: .top,
+            screenFrame: externalFrame,
+            visibleFrame: externalVisible,
+            safeAreaTop: 0,
+            thickness: 26,
+            margin: 0,
+            offsetY: -20)
+        #expect(BarPlacement.visibleInset(edge: .top, bar: topDown,
+                                          visibleFrame: externalVisible) == 46)
+
+        let bottomUp = BarPlacement.windowFrame(
+            edge: .bottom,
+            screenFrame: externalFrame,
+            visibleFrame: externalVisible,
+            safeAreaTop: 0,
+            thickness: 26,
+            margin: 0,
+            offsetY: 18)
+        #expect(BarPlacement.visibleInset(edge: .bottom, bar: bottomUp,
+                                          visibleFrame: externalVisible) == 44)
+    }
+
+    @Test("a bar that stays in the notch strip does not shrink the tiling area")
+    func notchStripDoesNotInsetVisible() {
+        let thickness = BarPlacement.thickness(
+            edge: .top, requested: 26, floating: false, safeAreaTop: safeTop)
+        let frame = BarPlacement.windowFrame(
+            edge: .top,
+            screenFrame: notchedFrame,
+            visibleFrame: notchedVisible,
+            safeAreaTop: safeTop,
+            thickness: thickness,
+            margin: 0)
+        #expect(BarPlacement.visibleInset(edge: .top, bar: frame,
+                                          visibleFrame: notchedVisible) == 0)
+    }
+
     @Test("the camera housing converts into bar-local x")
     func notchCutoutIsLocal() {
         // Left ear 640pt, housing 180pt, right ear the rest, bar at x=0.
