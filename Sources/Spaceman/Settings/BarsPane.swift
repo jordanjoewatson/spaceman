@@ -154,7 +154,7 @@ struct BarsPane: View {
     private var offsetsSection: some View {
         GroupBox("Display offsets") {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Positive values move a bar up. Negative values move it down.")
+                Text("Positive values move a bar up (including behind a camera housing). Negative values move it down.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
 

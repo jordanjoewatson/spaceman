@@ -10,8 +10,6 @@ import SpacemanCore
 /// editor shows is the bar, not an approximation of it.
 struct BarView: View {
     let edge: BarEdge
-    /// The window's real height, which on a notched display may be taller than
-    /// the preset so the ears either side of the camera are filled.
     let barHeight: CGFloat
     let context: BarContext
     let router: ZoneScrollRouter
@@ -36,39 +34,19 @@ struct BarView: View {
     @State private var holes: [CGRect] = []
 
     var body: some View {
-        let cutout = notchCutout
         ZStack {
             // Unpadded, so the material spans the whole bar. Padding the
             // background along with the content inset the frosted surface
             // itself and left bare strips at both ends of the bar.
             BarBackground(layout: layout,
                           preferences: context.preferences,
-                          holes: holes + (cutout.map { [CGRect(x: $0.minX, y: 0, width: $0.width, height: barHeight)] } ?? []))
+                          holes: holes)
 
-            if let cutout {
-                notchedModules(cutout)
-            } else {
-                standardModules
-            }
+            standardModules
         }
         .frame(height: barHeight)
         .coordinateSpace(name: BarCoordinateSpace.name)
         .onPreferenceChange(BarHolesKey.self) { holes = $0 }
-    }
-
-    /// Camera housing in bar-local x, from the screen's auxiliary menu-bar areas.
-    private var notchCutout: CGRect? {
-        guard edge == .top, !layout.floating,
-              let screen = NSScreen.screens.first(where: { $0.displayID == context.displayID }),
-              let left = screen.auxiliaryTopLeftArea,
-              let right = screen.auxiliaryTopRightArea
-        else { return nil }
-        guard var cutout = BarPlacement.notchCutout(barMinX: screen.frame.minX,
-                                                    leftAuxMaxX: left.maxX,
-                                                    rightAuxMinX: right.minX)
-        else { return nil }
-        cutout.size.height = barHeight
-        return cutout
     }
 
     private var standardModules: some View {
@@ -84,37 +62,6 @@ struct BarView: View {
             zone(.center)
         }
         .padding(.horizontal, layout.edgePadding)
-    }
-
-    /// Modules stay in the ears; the housing is a hole, not a place for a clock.
-    private func notchedModules(_ cutout: CGRect) -> some View {
-        HStack(spacing: 0) {
-            HStack(spacing: 8) {
-                zone(.leading)
-                Spacer(minLength: 4)
-                zone(.center)
-            }
-            .padding(.leading, layout.edgePadding)
-            .frame(width: max(0, cutout.minX), alignment: .leading)
-
-            Color.clear.frame(width: cutout.width)
-
-            HStack(spacing: 8) {
-                Spacer(minLength: 4)
-                zone(.trailing)
-            }
-            .padding(.trailing, layout.edgePadding)
-            .frame(width: max(0, barWidth(minus: cutout.maxX)), alignment: .trailing)
-        }
-    }
-
-    private func barWidth(minus trailingConsumed: CGFloat) -> CGFloat {
-        // The hosting view is the window; on a notched flush bar that is the
-        // full display width. Using the cutout's trailing edge keeps the right
-        // ear sized independently of whatever SwiftUI thinks the stack is.
-        guard let screen = NSScreen.screens.first(where: { $0.displayID == context.displayID })
-        else { return 0 }
-        return max(0, screen.frame.width - trailingConsumed)
     }
 
     private func zone(_ side: ZoneSide) -> some View {

@@ -8,9 +8,10 @@ enum BarEdge {
 
 /// A borderless panel pinned to the top or bottom of a screen.
 ///
-/// Flush top bars on a notched display sit on `screen.frame` so they fill the
-/// ears either side of the camera; everything else uses `visibleFrame` (menu
-/// bar and Dock already subtracted). See `BarPlacement`.
+/// Placement uses `visibleFrame` (menu bar / camera strip and Dock already
+/// subtracted). A positive top-bar offset slides the panel up into that strip
+/// — including behind a camera housing — without changing the bar's shape.
+/// See `BarPlacement`.
 ///
 /// Everything here is Tier-1 API — an app arranging its own windows is never
 /// restricted, sandboxed or not. `.canJoinAllSpaces` is what makes the bar
@@ -56,9 +57,10 @@ final class BarWindow: NSPanel {
         isReleasedWhenClosed = false
         isExcludedFromWindowsMenu = true
 
-        // Above ordinary windows, below the system menu bar so we never appear
-        // to be covering it.
-        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.mainMenuWindow)) - 1)
+        // High enough to remain visible when the user offsets a top bar into
+        // the menu-bar / camera strip; below that, the system menu bar covers
+        // the panel and it appears to vanish as it crosses the island bottom.
+        level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.mainMenuWindow)))
 
         collectionBehavior = [
             .canJoinAllSpaces,      // present on every Space
@@ -96,9 +98,7 @@ final class BarWindow: NSPanel {
         displayID = screen.displayID
         let frame = BarPlacement.windowFrame(
             edge: edge == .top ? .top : .bottom,
-            screenFrame: screen.frame,
             visibleFrame: screen.visibleFrame,
-            safeAreaTop: screen.safeAreaInsets.top,
             thickness: thickness,
             margin: margin,
             offsetY: offsetY)

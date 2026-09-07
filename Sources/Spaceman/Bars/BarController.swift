@@ -4,12 +4,11 @@ import SpacemanCore
 
 /// Owns one top and one bottom bar per screen and keeps them positioned.
 ///
-/// Placement is `BarPlacement`: `visibleFrame` for the Dock, menu bar, and
-/// floating bars; the full `screen.frame` for a flush top bar on a notched
-/// display so the ears either side of the camera are filled rather than left
-/// empty. Display changes, Dock repositioning and auto-hide still come from
-/// the public `NSScreen` notifications and a short poll — no Screen Recording
-/// consent, no private API.
+/// Placement is `BarPlacement`: bars rest on `visibleFrame`, and a positive
+/// top-bar offset slides them up into the menu-bar / camera strip when the
+/// user wants that. Display changes, Dock repositioning and auto-hide still
+/// come from the public `NSScreen` notifications and a short poll — no Screen
+/// Recording consent, no private API.
 @MainActor
 final class BarController {
 
@@ -134,8 +133,7 @@ final class BarController {
     }
 
     /// A connected or disconnected display needs its bars created or torn down,
-    /// not just repositioned. A change in the camera-strip height also needs a
-    /// rebuild: that thickness is baked into the window when it is created.
+    /// not just repositioned.
     private func syncIfChanged() {
         let current = NSScreen.screens.map(ScreenSnapshot.init)
         guard current != lastScreens else { return }
@@ -144,9 +142,8 @@ final class BarController {
 
     private func applyScreenChange(_ current: [ScreenSnapshot]) {
         let idsChanged = current.map(\.id) != lastScreens.map(\.id)
-        let notchChanged = current.map(\.safeTop) != lastScreens.map(\.safeTop)
         lastScreens = current
-        if idsChanged || notchChanged || current.count != topBars.count {
+        if idsChanged || current.count != topBars.count {
             rebuild(onCycleLayout: onCycleLayout,
                     onRetile: onRetile,
                     onShrinkMaster: onShrinkMaster,
@@ -217,16 +214,10 @@ final class BarController {
     /// How far `visibleFrame` is inset to the bar's inner edge.
     private func reserved(edge: BarPlacement.Edge, layout: BarLayout,
                           on screen: NSScreen) -> CGFloat {
-        let thickness = BarPlacement.thickness(
-            edge: edge,
-            requested: CGFloat(layout.height),
-            floating: layout.floating,
-            safeAreaTop: screen.safeAreaInsets.top)
+        let thickness = CGFloat(layout.height)
         let frame = BarPlacement.windowFrame(
             edge: edge,
-            screenFrame: screen.frame,
             visibleFrame: screen.visibleFrame,
-            safeAreaTop: screen.safeAreaInsets.top,
             thickness: thickness,
             margin: layout.floating ? Self.floatingMargin : 0,
             offsetY: offset(for: edge, displayID: screen.displayID))
@@ -237,11 +228,7 @@ final class BarController {
     private func makeBar(edge: BarEdge, layout: BarLayout,
                          context: BarContext, on screen: NSScreen) -> BarWindow {
         let placementEdge: BarPlacement.Edge = edge == .top ? .top : .bottom
-        let thickness = BarPlacement.thickness(
-            edge: placementEdge,
-            requested: CGFloat(layout.height),
-            floating: layout.floating,
-            safeAreaTop: screen.safeAreaInsets.top)
+        let thickness = CGFloat(layout.height)
         let router = ZoneScrollRouter()
         let bar = BarWindow(edge: edge,
                             thickness: thickness,
@@ -316,18 +303,15 @@ private struct BarGeometrySignature: Equatable {
 }
 
 /// Enough of an `NSScreen` to decide whether bars need a rebuild or just a
-/// nudge. `safeTop` is the camera-strip height; it is baked into window
-/// thickness, so a change there cannot be handled by `setFrame` alone.
+/// nudge.
 private struct ScreenSnapshot: Equatable {
     var id: CGDirectDisplayID
     var frame: CGRect
     var visible: CGRect
-    var safeTop: CGFloat
 
     init(_ screen: NSScreen) {
         id = screen.displayID
         frame = screen.frame
         visible = screen.visibleFrame
-        safeTop = screen.safeAreaInsets.top
     }
 }

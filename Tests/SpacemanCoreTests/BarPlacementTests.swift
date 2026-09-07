@@ -15,16 +15,10 @@ struct BarPlacementTests {
 
     @Test("a flush top bar on an external display sits on the visible frame")
     func externalFlushTop() {
-        let thickness = BarPlacement.thickness(
-            edge: .top, requested: 26, floating: false, safeAreaTop: 0)
-        #expect(thickness == 26)
-
         let frame = BarPlacement.windowFrame(
             edge: .top,
-            screenFrame: externalFrame,
             visibleFrame: externalVisible,
-            safeAreaTop: 0,
-            thickness: thickness,
+            thickness: 26,
             margin: 0)
         #expect(frame.maxY == externalVisible.maxY)
         #expect(frame.height == 26)
@@ -32,54 +26,50 @@ struct BarPlacementTests {
         #expect(BarPlacement.visibleHeightUsed(bar: frame, visibleFrame: externalVisible) == 26)
     }
 
-    @Test("a flush top bar on a notched display fills the camera strip")
-    func notchedFlushTopFillsEars() {
-        let thickness = BarPlacement.thickness(
-            edge: .top, requested: 26, floating: false, safeAreaTop: safeTop)
-        #expect(thickness == safeTop)
-
+    @Test("a flush top bar on a notched display starts just below the camera strip")
+    func notchedFlushTopStartsBelowStrip() {
         let frame = BarPlacement.windowFrame(
             edge: .top,
-            screenFrame: notchedFrame,
             visibleFrame: notchedVisible,
-            safeAreaTop: safeTop,
-            thickness: thickness,
+            thickness: 26,
             margin: 0)
-        #expect(frame.maxY == notchedFrame.maxY)
-        #expect(frame.minY == notchedVisible.maxY)
-        #expect(frame.width == notchedFrame.width)
-        #expect(BarPlacement.visibleHeightUsed(bar: frame, visibleFrame: notchedVisible) == 0)
+        #expect(frame.maxY == notchedVisible.maxY)
+        #expect(frame.height == 26)
+        #expect(frame.width == notchedVisible.width)
+        #expect(BarPlacement.visibleHeightUsed(bar: frame, visibleFrame: notchedVisible) == 26)
     }
 
-    @Test("a preset taller than the notch keeps its height")
-    func tallerThanNotch() {
-        let thickness = BarPlacement.thickness(
-            edge: .top, requested: 48, floating: false, safeAreaTop: safeTop)
-        #expect(thickness == 48)
-
-        let frame = BarPlacement.windowFrame(
+    @Test("a positive offset slides a top bar continuously into the camera strip")
+    func notchedOffsetEntersStripGradually() {
+        let partial = BarPlacement.windowFrame(
             edge: .top,
-            screenFrame: notchedFrame,
             visibleFrame: notchedVisible,
-            safeAreaTop: safeTop,
-            thickness: thickness,
-            margin: 0)
-        #expect(frame.maxY == notchedFrame.maxY)
-        #expect(BarPlacement.visibleHeightUsed(bar: frame, visibleFrame: notchedVisible) == 10)
+            thickness: 26,
+            margin: 0,
+            offsetY: 12)
+        #expect(partial.maxY == notchedVisible.maxY + 12)
+        #expect(partial.minY == notchedVisible.maxY - 14)
+        #expect(BarPlacement.visibleInset(edge: .top, bar: partial,
+                                          visibleFrame: notchedVisible) == 14)
+
+        let flush = BarPlacement.windowFrame(
+            edge: .top,
+            visibleFrame: notchedVisible,
+            thickness: 26,
+            margin: 0,
+            offsetY: safeTop)
+        #expect(flush.maxY == notchedFrame.maxY)
+        #expect(flush.minY == notchedFrame.maxY - 26)
+        #expect(BarPlacement.visibleInset(edge: .top, bar: flush,
+                                          visibleFrame: notchedVisible) == 0)
     }
 
-    @Test("a floating top bar stays in the visible frame, even with a notch")
+    @Test("a floating top bar stays inset from the visible frame, even with a notch")
     func floatingIgnoresNotchStrip() {
-        let thickness = BarPlacement.thickness(
-            edge: .top, requested: 24, floating: true, safeAreaTop: safeTop)
-        #expect(thickness == 24)
-
         let frame = BarPlacement.windowFrame(
             edge: .top,
-            screenFrame: notchedFrame,
             visibleFrame: notchedVisible,
-            safeAreaTop: safeTop,
-            thickness: thickness,
+            thickness: 24,
             margin: 10)
         #expect(frame.maxY == notchedVisible.maxY - 10)
         #expect(frame.width == notchedVisible.width - 20)
@@ -89,9 +79,7 @@ struct BarPlacementTests {
     func bottomIgnoresNotch() {
         let frame = BarPlacement.windowFrame(
             edge: .bottom,
-            screenFrame: notchedFrame,
             visibleFrame: notchedVisible,
-            safeAreaTop: safeTop,
             thickness: 26,
             margin: 0)
         #expect(frame.minY == notchedVisible.minY)
@@ -102,9 +90,7 @@ struct BarPlacementTests {
     func offsetsShiftY() {
         let top = BarPlacement.windowFrame(
             edge: .top,
-            screenFrame: externalFrame,
             visibleFrame: externalVisible,
-            safeAreaTop: 0,
             thickness: 26,
             margin: 0,
             offsetY: -12)
@@ -112,9 +98,7 @@ struct BarPlacementTests {
 
         let bottom = BarPlacement.windowFrame(
             edge: .bottom,
-            screenFrame: externalFrame,
             visibleFrame: externalVisible,
-            safeAreaTop: 0,
             thickness: 26,
             margin: 0,
             offsetY: 18)
@@ -125,9 +109,7 @@ struct BarPlacementTests {
     func tilingFollowsOffsetBar() {
         let topDown = BarPlacement.windowFrame(
             edge: .top,
-            screenFrame: externalFrame,
             visibleFrame: externalVisible,
-            safeAreaTop: 0,
             thickness: 26,
             margin: 0,
             offsetY: -20)
@@ -136,9 +118,7 @@ struct BarPlacementTests {
 
         let bottomUp = BarPlacement.windowFrame(
             edge: .bottom,
-            screenFrame: externalFrame,
             visibleFrame: externalVisible,
-            safeAreaTop: 0,
             thickness: 26,
             margin: 0,
             offsetY: 18)
@@ -146,35 +126,15 @@ struct BarPlacementTests {
                                           visibleFrame: externalVisible) == 44)
     }
 
-    @Test("a bar that stays in the notch strip does not shrink the tiling area")
+    @Test("a bar that sits entirely in the notch strip does not shrink the tiling area")
     func notchStripDoesNotInsetVisible() {
-        let thickness = BarPlacement.thickness(
-            edge: .top, requested: 26, floating: false, safeAreaTop: safeTop)
         let frame = BarPlacement.windowFrame(
             edge: .top,
-            screenFrame: notchedFrame,
             visibleFrame: notchedVisible,
-            safeAreaTop: safeTop,
-            thickness: thickness,
-            margin: 0)
+            thickness: 26,
+            margin: 0,
+            offsetY: safeTop)
         #expect(BarPlacement.visibleInset(edge: .top, bar: frame,
                                           visibleFrame: notchedVisible) == 0)
-    }
-
-    @Test("the camera housing converts into bar-local x")
-    func notchCutoutIsLocal() {
-        // Left ear 640pt, housing 180pt, right ear the rest, bar at x=0.
-        let cutout = BarPlacement.notchCutout(barMinX: 0,
-                                              leftAuxMaxX: 640,
-                                              rightAuxMinX: 820)
-        #expect(cutout?.minX == 640)
-        #expect(cutout?.width == 180)
-    }
-
-    @Test("no housing produces no cutout")
-    func noCutoutWithoutNotch() {
-        #expect(BarPlacement.notchCutout(barMinX: 0,
-                                         leftAuxMaxX: 0,
-                                         rightAuxMinX: 0) == nil)
     }
 }

@@ -1,60 +1,33 @@
 import CoreGraphics
 
-/// Where a bar window sits on a display, including the camera housing on a
-/// notched MacBook.
+/// Where a bar window sits on a display.
 ///
-/// `NSScreen.visibleFrame` already excludes the menu bar and Dock. On a display
-/// with a camera housing it also excludes that whole top strip, so a bar placed
-/// on `visibleFrame` sits *below* the notch and leaves the ears on either side
-/// of it empty. Flush top bars therefore pin to `screen.frame` and grow to the
-/// safe-area height so those ears are filled; content is laid out around the
-/// housing by the renderer using the auxiliary areas.
+/// Placement is always relative to `NSScreen.visibleFrame` (menu bar / camera
+/// strip and Dock already subtracted). A positive top-bar `offsetY` moves the
+/// bar up into that excluded strip — including behind a camera housing — so the
+/// user can slide continuously from just below the island to the physical top
+/// of the screen. The bar itself stays a straight rectangle; any hardware
+/// occlusion is left to the display.
 public enum BarPlacement {
 
     public enum Edge: Sendable {
         case top, bottom
     }
 
-    /// Window height. A flush top bar on a notched display is at least as tall
-    /// as the camera strip; otherwise the preset height is used as-is.
-    public static func thickness(edge: Edge,
-                                 requested: CGFloat,
-                                 floating: Bool,
-                                 safeAreaTop: CGFloat) -> CGFloat {
-        if edge == .top, !floating, safeAreaTop > 0 {
-            return max(requested, safeAreaTop)
-        }
-        return requested
-    }
-
     /// The bar's frame in AppKit coordinates (origin at the bottom-left).
     public static func windowFrame(edge: Edge,
-                                   screenFrame: CGRect,
                                    visibleFrame: CGRect,
-                                   safeAreaTop: CGFloat,
                                    thickness: CGFloat,
                                    margin: CGFloat,
                                    offsetY: CGFloat = 0) -> CGRect {
-        let width: CGFloat
-        let x: CGFloat
+        let width = visibleFrame.width - margin * 2
+        let x = visibleFrame.minX + margin
         let y: CGFloat
         switch edge {
         case .top:
-            if margin == 0, safeAreaTop > 0 {
-                // Physical top, full display width — the same strip the system
-                // menu bar uses, including the ears either side of the camera.
-                x = screenFrame.minX
-                y = screenFrame.maxY - thickness + offsetY
-                width = screenFrame.width
-            } else {
-                x = visibleFrame.minX + margin
-                y = visibleFrame.maxY - thickness - margin + offsetY
-                width = visibleFrame.width - margin * 2
-            }
+            y = visibleFrame.maxY - thickness - margin + offsetY
         case .bottom:
-            x = visibleFrame.minX + margin
             y = visibleFrame.minY + margin + offsetY
-            width = visibleFrame.width - margin * 2
         }
         return CGRect(x: x, y: y, width: width, height: thickness)
     }
@@ -82,17 +55,5 @@ public enum BarPlacement {
         case .top:    return max(0, visibleFrame.maxY - bar.minY)
         case .bottom: return max(0, bar.maxY - visibleFrame.minY)
         }
-    }
-
-    /// The camera housing in bar-local coordinates, or nil when there is none.
-    ///
-    /// `leftAuxMaxX` / `rightAuxMinX` are the screen-coordinate edges of
-    /// `NSScreen.auxiliaryTopLeftArea` and `auxiliaryTopRightArea`.
-    public static func notchCutout(barMinX: CGFloat,
-                                   leftAuxMaxX: CGFloat,
-                                   rightAuxMinX: CGFloat) -> CGRect? {
-        let width = rightAuxMinX - leftAuxMaxX
-        guard width > 1 else { return nil }
-        return CGRect(x: leftAuxMaxX - barMinX, y: 0, width: width, height: 0)
     }
 }
