@@ -59,6 +59,7 @@ struct BarConfigurationTests {
         // one you get undefined.
         let names = BarPreset.builtIns.map(\.name)
         #expect(Set(names).count == names.count)
+        #expect(names == ["Spaceman", "Minimal"])
     }
 
     @Test("every built-in is marked as one")
@@ -137,13 +138,6 @@ struct BarConfigurationTests {
         }
     }
 
-    @Test("Dense has a zone worth scrolling")
-    func denseHasPages() {
-        let hasMultiplePages = ZoneSide.allCases
-            .contains { BarPreset.dense.top.pages($0).count > 1 }
-        #expect(hasMultiplePages)
-    }
-
     // MARK: - Zone access
 
     @Test("setting a zone's pages reads them back")
@@ -182,12 +176,11 @@ struct SpacemanPresetTests {
             .filter { $0.style.isShared }
     }
 
-    @Test("every slash leans the same way")
-    func consistentDirection() {
-        // So the two bars read as one system rather than mirroring each other
-        // across the screen.
+    @Test("the signature preset uses both slash directions")
+    func usesBothDirections() {
         #expect(!slants.isEmpty)
-        #expect(slants.allSatisfy { $0.style == .upSlash })
+        #expect(slants.contains { $0.style == .upSlash })
+        #expect(slants.contains { $0.style == .downSlash })
     }
 
     @Test("both bars carry the treatment on both sides")

@@ -75,6 +75,11 @@ final class TilingController {
     /// Stops the app re-asking windows for frames they have already refused.
     private var placements = PlacementTracker()
 
+    /// Last display-assignment description emitted for each window. Assignment
+    /// is evaluated at 20 Hz, so diagnostics are only useful when something
+    /// changes (especially when a window starts alternating between displays).
+    private var lastDisplayDiagnostics: [CGWindowID: String] = [:]
+
     private let preferences: Preferences
     private let animator = Animator()
     /// Set while an animation owns the window frames, so the reconciler does not
@@ -537,6 +542,8 @@ final class TilingController {
     /// counts as where it will land).
     private func plannedTargets(_ windows: [ManagedWindow]) -> [CGWindowID: CGRect] {
         var out: [CGWindowID: CGRect] = [:]
+        var matchingDisplays: [CGWindowID: [CGDirectDisplayID]] = [:]
+        var targetDisplay: [CGWindowID: CGDirectDisplayID] = [:]
 
         // Tile each display independently: a tiling region is one display × one
         // Space (the Go version's `Region`). Windows are assigned by Space
@@ -546,6 +553,9 @@ final class TilingController {
             let space = ledger.current(for: screen.displayID)
             let group = windows.filter { window in
                 Displays.belongs(window, toSpace: space.raw, screen: screen.frame)
+            }
+            for window in group {
+                matchingDisplays[window.id, default: []].append(screen.displayID)
             }
             guard !group.isEmpty else { continue }
 
@@ -582,9 +592,47 @@ final class TilingController {
             for (w, t) in zip(ordered, targets) {
                 Log.debug("  z=\(w.zOrder) \(w.ownerName) at=\(w.frame) -> \(t)")
                 out[w.id] = t
+                targetDisplay[w.id] = screen.displayID
             }
         }
+        logDisplayAssignments(windows, matches: matchingDisplays,
+                              targets: out, targetDisplays: targetDisplay)
         return out
+    }
+
+    /// Makes transient multi-display ownership visible without flooding stderr
+    /// on every reconciliation tick. If a window is caught in the suspected
+    /// feedback loop, successive lines will show `chosen` alternating; if it is
+    /// eligible on more than one display, `matches` will contain both IDs.
+    private func logDisplayAssignments(
+        _ windows: [ManagedWindow],
+        matches: [CGWindowID: [CGDirectDisplayID]],
+        targets: [CGWindowID: CGRect],
+        targetDisplays: [CGWindowID: CGDirectDisplayID]
+    ) {
+        guard Log.enabled else { return }
+
+        let screens = NSScreen.screens
+        let live = Set(windows.map(\.id))
+        lastDisplayDiagnostics = lastDisplayDiagnostics.filter { live.contains($0.key) }
+
+        for window in windows {
+            let centre = CGPoint(x: window.frame.midX, y: window.frame.midY)
+            let physical = screens.first { $0.frame.contains(centre) }?.displayID
+            let matched = matches[window.id, default: []]
+            let spaces = window.spaceIDs.sorted()
+            let physicalDescription = physical.map { String($0) } ?? "none"
+            let chosenDescription = targetDisplays[window.id].map { String($0) } ?? "none"
+            let targetDescription = targets[window.id].map { String(describing: $0) } ?? "none"
+            let detail = "frame=\(window.frame) centreDisplay=\(physicalDescription) "
+                + "spaces=\(spaces) matches=\(matched) "
+                + "chosen=\(chosenDescription) target=\(targetDescription)"
+
+            guard lastDisplayDiagnostics[window.id] != detail else { continue }
+            let warning = matched.count > 1 ? " AMBIGUOUS" : ""
+            Log.debug("display-assignment\(warning) id=\(window.id) app=\(window.ownerName) \(detail)")
+            lastDisplayDiagnostics[window.id] = detail
+        }
     }
 
     // MARK: - Reconciliation

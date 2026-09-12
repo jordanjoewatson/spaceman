@@ -9,6 +9,7 @@ struct PalettePresetTests {
     func namesAreUnique() {
         let names = PalettePreset.builtIns.map(\.name)
         #expect(Set(names).count == names.count)
+        #expect(names == ["Spaceman", "Midnight"])
     }
 
     @Test("every built-in is flagged as one")
@@ -38,10 +39,19 @@ struct PalettePresetTests {
     func opinionatedPalettesAreComplete() {
         // A partial palette resolves its gaps from the system, which mixes a
         // themed bar with system colours and looks accidental.
-        for palette in PalettePreset.builtIns where palette.name != PalettePreset.system.name {
+        for palette in PalettePreset.builtIns {
             for role in ThemeRole.allCases {
                 #expect(palette.color(for: role) != nil,
                         "'\(palette.name)' has no colour for \(role.rawValue)")
+            }
+        }
+    }
+
+    @Test("shipping palettes use the same colours in both appearances")
+    func builtInsMatchAcrossAppearances() {
+        for palette in PalettePreset.builtIns {
+            for color in palette.colors.values {
+                #expect(color.light == color.dark, "'\(palette.name)' differs by appearance")
             }
         }
     }

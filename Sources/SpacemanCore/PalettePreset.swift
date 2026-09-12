@@ -73,9 +73,9 @@ public struct PalettePreset: Preset {
 
 public extension PalettePreset {
 
-    static let builtIns: [PalettePreset] = [.system, .minimalDark, .midnight, .paper]
+    static let builtIns: [PalettePreset] = [.spaceman, .midnight]
 
-    static var defaultName: String { system.name }
+    static var defaultName: String { spaceman.name }
 
     /// No overrides at all: every role resolves from macOS. Accent follows
     /// System Settings, everything flips with dark mode, and Increase Contrast
@@ -95,8 +95,8 @@ public extension PalettePreset {
     /// `barSurface`, `barSegment` and `separator`. Its `accent_alt`,
     /// `surface_hover`, `selection`, `bar_tint_to` and `bar_stat` have no role
     /// here yet — the port has no consumer for them.
-    static let minimalDark = PalettePreset(
-        name: "Minimal Dark",
+    static let spaceman = PalettePreset(
+        name: "Spaceman",
         colors: [
             "background": PaletteColor(hex("#1E1E1E")),   // bg
             "surface":    PaletteColor(hex("#2D2D2F")),   // surface
@@ -109,28 +109,33 @@ public extension PalettePreset {
             "warn":       PaletteColor(hex("#FF9F0A")),   // warn
             "danger":     PaletteColor(hex("#FF453A")),   // danger
             "separator":  PaletteColor(hex("#FFFFFF1F")), // bar_border
-            "barSurface": PaletteColor(hex("#141416CC")), // bar_tint
+            "barSurface": PaletteColor(hex("#9C9FABCC")),
             "barSegment": PaletteColor(hex("#FFFFFF14")), // bar_highlight
         ],
         isBuiltIn: true
     )
 
-    /// Dark in both appearances, for bars that should read as chrome whatever
-    /// the rest of the desktop is doing.
+    /// Source compatibility for callers that used the old property name. The
+    /// shipping preset is now presented as "Spaceman".
+    static var minimalDark: PalettePreset { spaceman }
+
+    /// Very dark graphite greys with cool turquoise highlights. Every role has
+    /// one deliberate value in both appearances; user palettes remain free to
+    /// define different light and dark values.
     static let midnight = PalettePreset(
         name: "Midnight",
         colors: [
-            "accent":     PaletteColor(hex("#4CC2FF")),
-            "background": PaletteColor(hex("#0B0F17")),
-            "surface":    PaletteColor(hex("#161C28")),
-            "text":       PaletteColor(hex("#E6EDF7")),
-            "muted":      PaletteColor(hex("#7C8899")),
-            "good":       PaletteColor(hex("#3FB950")),
-            "warn":       PaletteColor(hex("#D29922")),
-            "danger":     PaletteColor(hex("#F85149")),
-            "separator":  PaletteColor(hex("#FFFFFF1F")),
-            "barSurface": PaletteColor(hex("#FFFFFF0A")),
-            "barSegment": PaletteColor(hex("#FFFFFF16")),
+            "accent":     PaletteColor(hex("#38D6C7")),
+            "background": PaletteColor(hex("#171A1D")),
+            "surface":    PaletteColor(hex("#24292D")),
+            "text":       PaletteColor(hex("#D8DEDF")),
+            "muted":      PaletteColor(hex("#899496")),
+            "good":       PaletteColor(hex("#45C9A5")),
+            "warn":       PaletteColor(hex("#D8B85A")),
+            "danger":     PaletteColor(hex("#E06C75")),
+            "separator":  PaletteColor(hex("#A7B3B526")),
+            "barSurface": PaletteColor(hex("#1D2124F2")),
+            "barSegment": PaletteColor(hex("#38D6C71F")),
         ],
         isBuiltIn: true
     )

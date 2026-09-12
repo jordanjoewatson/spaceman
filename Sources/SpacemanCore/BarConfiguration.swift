@@ -245,14 +245,13 @@ public extension BarPreset {
 
     /// The presets compiled into the app. Declaration order is the order they
     /// appear in Settings.
-    static let builtIns: [BarPreset] = [.classic, .spaceman, .minimal, .dense]
+    static let builtIns: [BarPreset] = [.spaceman, .minimal]
 
-    static var defaultName: String { classic.name }
+    static var defaultName: String { spaceman.name }
 
-    /// What the bars looked like before they were configurable — the migration
-    /// target, so an existing install sees no visual change.
-    static let classic = BarPreset(
-        name: "Classic",
+    /// A restrained configuration with no shaped or coloured sections.
+    static let minimal = BarPreset(
+        name: "Minimal",
         top: BarLayout(
             leading: [BarPage([.spaceLabel])],
             trailing: [BarPage([.battery, .clock])]
@@ -265,63 +264,66 @@ public extension BarPreset {
         isBuiltIn: true
     )
 
-    /// The reason sections exist: a cascade of filled blocks meeting along
-    /// shared diagonals, in the style of a shell powerline prompt.
-    ///
-    /// Every slash leans the same way — `upSlash` throughout — so the two bars
-    /// read as one system rather than mirroring each other across the screen.
-    /// Both bars carry the treatment on both sides, which is what makes the
-    /// trailing zones look finished rather than trailing off.
+    /// Source compatibility for callers that used the old built-in name.
+    static var classic: BarPreset { minimal }
+
+    /// The project's signature configuration, promoted from the user-tuned
+    /// "Spaceman Copy" preset. Orange powerline sections frame the information
+    /// modules, with the top bar carrying identity/time and the bottom bar
+    /// carrying layout/status controls.
     static let spaceman = BarPreset(
         name: "Spaceman",
         top: BarLayout(
             leading: [BarPage(sections: [
-                BarSection(modules: [.spaceLabel],
-                           fill: .role(.accent), text: .role(.background),
+                BarSection(modules: [.brand],
+                           fill: .hex(HexColor("#D08100")!), text: .role(.background),
                            trailingEdge: EdgeShape(style: .upSlash, width: 12)),
                 BarSection(modules: [.date],
-                           fill: .role(.surface),
+                           fill: .role(.warn),
                            trailingEdge: EdgeShape(style: .upSlash, width: 12)),
             ])],
+            center: [BarPage(sections: [])],
             trailing: [BarPage(sections: [
-                BarSection(modules: [.battery],
-                           fill: .role(.surface),
-                           leadingEdge: EdgeShape(style: .upSlash, width: 12)),
+                BarSection(modules: [.battery, BarModule("pomodoro.timer")],
+                           fill: .hex(HexColor("#D08100")!), text: .role(.background),
+                           leadingEdge: EdgeShape(style: .downSlash, width: 12),
+                           trailingEdge: EdgeShape(style: .downSlash, width: 12)),
                 BarSection(modules: [.clock],
-                           fill: .role(.accent), text: .role(.background),
-                           leadingEdge: EdgeShape(style: .upSlash, width: 12)),
+                           fill: .role(.warn), text: .role(.background),
+                           leadingEdge: EdgeShape(style: .downSlash, width: 12)),
             ])]
         ),
         bottom: BarLayout(
             leading: [BarPage(sections: [
                 BarSection(modules: [.layoutMode],
-                           fill: .role(.accent), text: .role(.background),
-                           trailingEdge: EdgeShape(style: .upSlash, width: 12)),
-                BarSection(modules: [.masterControls, .retileButton],
-                           fill: .role(.surface),
-                           trailingEdge: EdgeShape(style: .upSlash, width: 12)),
+                           fill: .hex(HexColor("#D08100")!), text: .role(.background),
+                           trailingEdge: EdgeShape(style: .downSlash, width: 12)),
+                BarSection(modules: [.spacer],
+                           fill: .role(.warn),
+                           trailingEdge: EdgeShape(style: .downSlash, width: 12)),
             ])],
             center: [BarPage(sections: [
                 BarSection(modules: [BarModule("clipboard.history")],
-                           fill: .role(.surface),
+                           text: .role(.background),
                            leadingEdge: EdgeShape(style: .upSlash, width: 12),
                            trailingEdge: EdgeShape(style: .upSlash, width: 12)),
             ])],
             trailing: [BarPage(sections: [
                 BarSection(modules: [.status],
-                           fill: .role(.surface),
+                           fill: .role(.warn),
                            leadingEdge: EdgeShape(style: .upSlash, width: 12)),
                 BarSection(modules: [.moverStatus],
-                           fill: .role(.accent), text: .role(.background),
+                           fill: .hex(HexColor("#D08100")!), text: .role(.background),
                            leadingEdge: EdgeShape(style: .upSlash, width: 12)),
             ])]
         ),
         isBuiltIn: true
     )
 
-    /// Floating, rounded, and as close to empty as still being useful allows.
-    static let minimal = BarPreset(
-        name: "Minimal",
+    /// The former floating Minimal preset. Retained as data for source
+    /// compatibility, but no longer offered in the built-in preset list.
+    static let floatingMinimal = BarPreset(
+        name: "Floating Minimal",
         top: BarLayout(height: 24, floating: true, cornerRadius: 11,
                        material: "popover",
                        center: [BarPage([.clock])]),
