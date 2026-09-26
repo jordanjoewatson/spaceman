@@ -8,7 +8,7 @@
 
 Space Manager is a configurable tiling window manager and status-bar environment for macOS. It adds keyboard-driven tiling, two-dimensional status bars, and an extensible plugin system while preserving familiar macOS workflows.
 
-Spaceman complements Spaces, Mission Control, the Dock, and ordinary mouse-based window management rather than replacing them. It uses public macOS APIs, does not require System Integrity Protection to be disabled, and requests Accessibility permission only to manage windows.
+Spaceman complements Spaces, Mission Control, the Dock, and ordinary mouse-based window management rather than replacing them. It does not require System Integrity Protection to be disabled, and requests Accessibility permission only to manage windows.
 
 ![Spaceman tiling a code editor and browser with its launcher and status bars visible](docs/assets/hero.png)
 
