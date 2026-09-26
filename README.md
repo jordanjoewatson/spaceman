@@ -6,7 +6,7 @@
 [![Downloads](https://img.shields.io/github/downloads/jordanjoewatson/spaceman/total)](https://github.com/jordanjoewatson/spaceman/releases)
 [![License: MIT](https://img.shields.io/github/license/jordanjoewatson/spaceman)](LICENSE)
 
-Spaceman is a configurable tiling window manager and status-bar environment for macOS. It adds keyboard-driven tiling, two-dimensional status bars, and an extensible plugin system while preserving familiar macOS workflows.
+Space Manager is a configurable tiling window manager and status-bar environment for macOS. It adds keyboard-driven tiling, two-dimensional status bars, and an extensible plugin system while preserving familiar macOS workflows.
 
 Spaceman complements Spaces, Mission Control, the Dock, and ordinary mouse-based window management rather than replacing them. It uses public macOS APIs, does not require System Integrity Protection to be disabled, and requests Accessibility permission only to manage windows.
 
