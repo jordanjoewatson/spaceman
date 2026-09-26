@@ -38,14 +38,6 @@ enum CommandCatalog {
                 { [weak tiler] in tiler?.toggleZoom() },
             command("window.minimize", KeyCode.m, .windows, "Minimize window")
                 { [weak tiler] in tiler?.minimizeFocused() },
-            command("window.display.left", KeyCode.leftArrow, .windows,
-                    "Move window to display on the left",
-                    modifiers: Modifiers.controlOptionCommand)
-                { [weak tiler] in tiler?.moveFocusedToDisplay(.left) },
-            command("window.display.right", KeyCode.rightArrow, .windows,
-                    "Move window to display on the right",
-                    modifiers: Modifiers.controlOptionCommand)
-                { [weak tiler] in tiler?.moveFocusedToDisplay(.right) },
 
             command("window.narrower", KeyCode.leftArrow, .windows,
                     "Narrower", modifiers: Modifiers.controlOptionShift)
@@ -94,7 +86,7 @@ enum ChordGlyphs {
     }
 
     /// Apple's order: control, option, shift, command.
-    private static func modifierGlyphs(_ modifiers: UInt32) -> String {
+    static func modifierGlyphs(_ modifiers: UInt32) -> String {
         var glyphs = ""
         if modifiers & UInt32(controlKey) != 0 { glyphs += "⌃" }
         if modifiers & UInt32(optionKey)  != 0 { glyphs += "⌥" }

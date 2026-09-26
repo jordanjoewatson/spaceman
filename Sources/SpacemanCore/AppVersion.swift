@@ -5,7 +5,7 @@
 /// with what the bars print.
 public enum AppVersion {
     /// User-facing version, e.g. the brand module and About strings.
-    public static let marketing = "0.2.0"
+    public static let marketing = "1.0.0"
     /// Monotonic build number written to `CFBundleVersion`.
     public static let build = 1
 }

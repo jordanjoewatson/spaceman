@@ -140,6 +140,7 @@ for size in 16 32 128 256 512; do
 done
 iconutil -c icns "$ICONSET" -o "$RES/AppIcon.icns"
 cp Resources/AppIcon.png "$RES/AppIcon.png"
+cp Resources/StatusIcon.png "$RES/StatusIcon.png"
 rm -rf "$(dirname "$ICONSET")"
 
 # One source of truth: Sources/SpacemanCore/AppVersion.swift

@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The helmet mark, loaded from the app bundle.
+/// The monochrome helmet mark, loaded from the app bundle.
 ///
 /// Drawn as a template so the menu bar and the bar module tint it like an SF
 /// Symbol. Missing in a `swift run` binary (no Resources); those call sites
@@ -43,8 +43,14 @@ enum BrandIcon {
         }
     }
 
-    /// PNG first (crisp at bar sizes), then the icns `CFBundleIconFile`.
+    /// The dedicated monochrome mark is bundled separately from the full-color
+    /// Dock icon. Falling back to AppIcon keeps `swift run` and older bundles
+    /// usable when the status asset is absent.
     private static var bundled: NSImage? {
+        if let url = Bundle.main.url(forResource: "StatusIcon", withExtension: "png"),
+           let image = NSImage(contentsOf: url) {
+            return image
+        }
         if let url = Bundle.main.url(forResource: "AppIcon", withExtension: "png"),
            let image = NSImage(contentsOf: url) {
             return image

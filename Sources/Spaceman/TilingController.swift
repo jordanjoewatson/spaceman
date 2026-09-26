@@ -1,11 +1,6 @@
 import AppKit
 import SpacemanCore
 
-/// Which side of the current display to send a window to.
-enum DisplayDirection {
-    case left, right
-}
-
 /// Tiles the windows on the current Space.
 ///
 /// Deliberately a *reconciliation loop*, not an event stream: every pass
@@ -428,39 +423,6 @@ final class TilingController {
         }?.displayID
     }
 
-    /// ⌃⌥⌘← / ⌃⌥⌘→: move the focused window to the display on that side,
-    /// wrapping at the ends. A plain Accessibility frame move: macOS re-tags
-    /// the window onto whatever Space the target display is showing, so no
-    /// private Space-move API is involved. The reconciler then glides it into
-    /// a slot on its new display and reflows the old one.
-    func moveFocusedToDisplay(_ direction: DisplayDirection) {
-        guard NSScreen.screens.count > 1,
-              let focused = WindowFocus.focused(),
-              let window = tileableNow().first(where: { $0.id == focused.id }),
-              let current = NSScreen.screens.first(where: {
-                  $0.frame.contains(CGPoint(x: window.frame.midX, y: window.frame.midY))
-              }),
-              let target = screen(beyond: current, direction: direction) else { return }
-
-        // Leaving a Space cancels any zoom the window held there.
-        for (space, zoomed) in zoomBySpace where zoomed == focused.id {
-            zoomBySpace[space] = nil
-        }
-
-        let area = bars.tilingArea(on: target)
-        var frame = window.frame
-        frame.origin = CGPoint(x: area.midX - frame.width / 2,
-                               y: area.midY - frame.height / 2)
-        let quartz = Coordinates.toQuartz(frame)
-        guard WindowFocus.setPosition(pid: window.pid, id: window.id, quartz.origin) else { return }
-
-        WindowFocus.focus(pid: window.pid, id: window.id)
-        // Bring the pointer along: no macOS command moves it between displays,
-        // and a keyboard-driven move loses the plot if the cursor stays behind.
-        CGWarpMouseCursorPosition(CGPoint(x: quartz.midX, y: quartz.midY))
-        tileNow()
-    }
-
     /// ⌃⌥D: hop the pointer to the next display (left-to-right, wrapping),
     /// landing in the centre of its tiling area. No window moves and focus
     /// doesn't change — this is only the mouse. (There is no macOS command for
@@ -472,19 +434,6 @@ final class TilingController {
         let current = screens.firstIndex(where: { $0.frame.contains(mouse) }) ?? 0
         let area = bars.tilingArea(on: screens[(current + 1) % screens.count])
         CGWarpMouseCursorPosition(Coordinates.toQuartz(point: CGPoint(x: area.midX, y: area.midY)))
-    }
-
-    /// The display immediately to the left/right of `screen`, wrapping around
-    /// the far end — with two displays either direction means "the other one".
-    private func screen(beyond screen: NSScreen, direction: DisplayDirection) -> NSScreen? {
-        let others = NSScreen.screens
-            .filter { $0.displayID != screen.displayID }
-            .sorted { $0.frame.midX < $1.frame.midX }
-        guard !others.isEmpty else { return nil }
-        switch direction {
-        case .left:  return others.filter { $0.frame.midX < screen.frame.midX }.last ?? others.last
-        case .right: return others.filter { $0.frame.midX > screen.frame.midX }.first ?? others.first
-        }
     }
 
     /// Run one command. The single place a `Command` becomes an effect, so the

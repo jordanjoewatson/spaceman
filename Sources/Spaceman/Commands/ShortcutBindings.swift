@@ -42,13 +42,15 @@ struct ShortcutBindings {
     /// when another command already holds it. A duplicate is worth refusing
     /// rather than warning about: the loser of a clash silently never fires.
     @discardableResult
-    func assign(_ text: String, to id: String) -> Bool {
+    func assign(_ text: String, to command: PluginCommand) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespaces).lowercased()
         guard trimmed.count == 1, let code = ChordGlyphs.keyCode(for: trimmed) else {
             return false
         }
-        guard !isTaken(code, excluding: id) else { return false }
-        preferences.setInteger(Int(code), forKey: key(for: id))
+        guard !isTaken(code, modifiers: command.modifiers, excluding: command.id) else {
+            return false
+        }
+        preferences.setInteger(Int(code), forKey: key(for: command.id))
         return true
     }
 
@@ -61,13 +63,19 @@ struct ShortcutBindings {
     }
 
     /// Whether another command — after its own override — already uses `code`.
-    func isTaken(_ code: UInt32, excluding id: String) -> Bool {
-        assignedCodes.contains { $0.key != id && $0.value == code }
+    func isTaken(_ code: UInt32, modifiers: UInt32, excluding id: String) -> Bool {
+        assignedChords.contains {
+            $0.key != id && $0.value.keyCode == code && $0.value.modifiers == modifiers
+        }
     }
 
-    /// Every key currently claimed, including open-app chords edited this session.
+    /// Every key currently claimed by a plain leader chord, including app
+    /// shortcuts edited this session. App shortcuts all use this modifier set,
+    /// so commands using ⇧ or ⌘ do not unnecessarily consume their keys.
     var takenKeyCodes: Set<UInt32> {
-        Set(assignedCodes.values)
+        Set(assignedChords.values.compactMap {
+            $0.modifiers == Modifiers.controlOption ? $0.keyCode : nil
+        })
     }
 
     /// Command id → key code, for every command the app registered.
@@ -76,18 +84,29 @@ struct ShortcutBindings {
     /// key held by a built-in default is still recognised as taken. App
     /// shortcuts are merged from preferences so a chord added in Settings is
     /// reserved immediately, not only after the next launch.
-    private var assignedCodes: [String: UInt32] {
-        var result: [String: UInt32] = [:]
+    private struct AssignedChord {
+        let keyCode: UInt32
+        let modifiers: UInt32
+    }
+
+    private var assignedChords: [String: AssignedChord] {
+        var result: [String: AssignedChord] = [:]
         let liveAppIDs = Set(preferences.appShortcuts.map(\.commandID))
         for command in Self.registered {
             // A shortcut removed this session must free its key immediately.
             if command.id.hasPrefix("apps."), !liveAppIDs.contains(command.id) {
                 continue
             }
-            result[command.id] = override(for: command.id) ?? command.keyCode
+            result[command.id] = AssignedChord(
+                keyCode: override(for: command.id) ?? command.keyCode,
+                modifiers: command.modifiers
+            )
         }
         for shortcut in preferences.appShortcuts {
-            result[shortcut.commandID] = shortcut.keyCode
+            result[shortcut.commandID] = AssignedChord(
+                keyCode: shortcut.keyCode,
+                modifiers: Modifiers.controlOption
+            )
         }
         return result
     }

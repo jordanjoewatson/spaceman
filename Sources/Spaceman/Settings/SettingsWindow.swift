@@ -159,7 +159,7 @@ private struct SettingsView: View {
                           commands: ShortcutBindings.registered)
         case .plugin(let name):
             if let pane = surface.settingsPanes.first(where: { $0.name == name }) {
-                PluginSettingsPane(pane: pane)
+                PluginSettingsPane(pane: pane, preferences: preferences)
             }
         case nil:
             ContentUnavailableView("Settings", systemImage: "gearshape")
@@ -176,6 +176,7 @@ private struct SettingsView: View {
 /// place in Settings rather than inventing its own "no settings" wording.
 private struct PluginSettingsPane: View {
     let pane: PluginSurface.SettingsPane
+    @ObservedObject var preferences: Preferences
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -187,16 +188,19 @@ private struct PluginSettingsPane: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            if !pane.shortcuts.isEmpty {
+            if !pane.commands.isEmpty {
                 GroupBox("Shortcuts") {
                     VStack(alignment: .leading, spacing: 4) {
-                        ForEach(pane.shortcuts, id: \.chord) { shortcut in
+                        ForEach(pane.commands, id: \.id) { command in
                             HStack(spacing: 10) {
-                                Text(shortcut.chord)
+                                Text(ChordGlyphs.string(
+                                    keyCode: preferences.shortcuts.keyCode(for: command),
+                                    modifiers: command.modifiers
+                                ))
                                     .font(.system(.caption, design: .monospaced))
                                     .frame(width: 70, alignment: .leading)
                                     .foregroundStyle(.secondary)
-                                Text(shortcut.desc).font(.caption)
+                                Text(command.desc).font(.caption)
                                 Spacer()
                             }
                         }

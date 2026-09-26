@@ -70,10 +70,10 @@ struct ShortcutsPane: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Leader is \(ChordGlyphs.leaderGlyphs) — every command is the leader "
-                 + "plus the key below.")
+            Text("Edit the key for each global shortcut. Its modifier chord is shown "
+                 + "beside it.")
                 .font(.callout)
-            Text("Duplicate keys are refused: the second one would silently never fire.")
+            Text("Duplicate chords are refused: the second one would silently never fire.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -95,7 +95,7 @@ private struct ShortcutRow: View {
             Text(command.desc)
                 .frame(width: 260, alignment: .leading)
 
-            Text(ChordGlyphs.leaderGlyphs)
+            Text(ChordGlyphs.modifierGlyphs(command.modifiers))
                 .font(.system(.body, design: .monospaced))
                 .foregroundStyle(.secondary)
 
@@ -134,7 +134,7 @@ private struct ShortcutRow: View {
     /// A rejected key leaves the field as it was rather than accepting something
     /// that would never fire.
     private func commit() {
-        rejected = !bindings.assign(text, to: command.id)
+        rejected = !bindings.assign(text, to: command)
         text = currentText
     }
 }
@@ -279,7 +279,9 @@ private struct AppShortcutRow: View {
             text = ChordGlyphs.keyName(shortcut.keyCode)
             return
         }
-        guard !bindings.isTaken(code, excluding: shortcut.commandID) else {
+        guard !bindings.isTaken(code,
+                                modifiers: Modifiers.controlOption,
+                                excluding: shortcut.commandID) else {
             rejected = true
             text = ChordGlyphs.keyName(shortcut.keyCode)
             return

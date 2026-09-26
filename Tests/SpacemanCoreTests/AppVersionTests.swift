@@ -4,10 +4,9 @@ import Testing
 @Suite("App version")
 struct AppVersionTests {
 
-    @Test("marketing version is a dotted number the plist can carry")
-    func marketingLooksLikeAVersion() {
-        #expect(AppVersion.marketing.contains("."))
-        #expect(AppVersion.marketing.split(separator: ".").count >= 2)
+    @Test("shipping marketing version is 1.0.0")
+    func shippingMarketingVersion() {
+        #expect(AppVersion.marketing == "1.0.0")
         #expect(AppVersion.build >= 1)
     }
 }

@@ -1,0 +1,67 @@
+name: Bug report
+description: Report a reproducible problem with Spaceman
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. For security vulnerabilities, use the private reporting link in SECURITY.md instead.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Press …
+        3. Observe …
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Spaceman version
+      placeholder: 1.0.0
+    validations:
+      required: true
+
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: macOS 15.6
+    validations:
+      required: true
+
+  - type: textarea
+    id: displays
+    attributes:
+      label: Display setup
+      description: Include display count, arrangement, resolution, scaling, and whether the Mac has a notch when relevant.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add screenshots, logs, selected plugins, or other useful information. Do not include secrets or private data.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for this problem.
+          required: true
+        - label: This report does not contain a security vulnerability.
+          required: true

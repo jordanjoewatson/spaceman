@@ -32,7 +32,7 @@ final class PluginSurface: ObservableObject {
         let name: String
         let title: String
         let summary: String
-        let shortcuts: [(chord: String, desc: String)]
+        let commands: [PluginCommand]
         /// nil when the plugin has nothing to configure.
         let content: (@MainActor () -> AnyView)?
     }
@@ -41,14 +41,12 @@ final class PluginSurface: ObservableObject {
 
     func register(_ plugins: [LoadedPlugin]) {
         for plugin in plugins {
-            let shortcuts = plugin.instance.commands
-                .filter { !$0.desc.isEmpty }
-                .map { (ChordGlyphs.string(keyCode: $0.keyCode, modifiers: $0.modifiers),
-                        $0.desc) }
             settingsPanes.append(SettingsPane(name: plugin.name,
                                               title: plugin.displayName,
                                               summary: plugin.summary,
-                                              shortcuts: shortcuts,
+                                              commands: plugin.instance.commands.filter {
+                                                  !$0.desc.isEmpty
+                                              },
                                               content: plugin.instance.settings?.content))
             for module in plugin.instance.barModules {
                 barModules[module.id] = module
