@@ -4,7 +4,7 @@
 [![Swift 6](https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white)](https://www.swift.org/)
 [![GitHub Release](https://img.shields.io/github/v/release/jordanjoewatson/spaceman)](https://github.com/jordanjoewatson/spaceman/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/jordanjoewatson/spaceman/total)](https://github.com/jordanjoewatson/spaceman/releases)
-[![License: MIT](https://img.shields.io/github/license/jordanjoewatson/spaceman)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Space Manager is a configurable tiling window manager and status-bar environment for macOS. It adds keyboard-driven tiling, two-dimensional status bars, and an extensible plugin system while preserving familiar macOS workflows.
 
