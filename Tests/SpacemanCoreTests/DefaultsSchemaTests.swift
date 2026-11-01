@@ -13,7 +13,7 @@ struct DefaultsSchemaTests {
         Defaults.zoomFraction, Defaults.animationDuration, Defaults.hoverSeconds,
     ]
     private let stringKeys: [DefaultsKey<String>] = [
-        Defaults.defaultLayout,
+        Defaults.defaultLayout, Defaults.excludedApps,
         Defaults.barPreset, Defaults.barCustomPresets, Defaults.barDisplayOffsets,
         Defaults.palette, Defaults.customPalettes,
         Defaults.appShortcuts,

@@ -10,6 +10,7 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 ### Added
 
 - Settings to show or hide the top and bottom status bars independently; a hidden bar's space goes back to tiled windows.
+- Tiling exclusion list in Settings → Tiling: excluded apps are never tiled, moved or resized. Entries match by bundle ID (including the app a helper process is nested inside) or executable name, with a trailing `*` wildcard. The built-in macOS utility exclusions (System Settings, Calculator, Open/Save panels…) are now the list's defaults and can be removed.
 
 ## [1.0.0] - 2026-09-26
 

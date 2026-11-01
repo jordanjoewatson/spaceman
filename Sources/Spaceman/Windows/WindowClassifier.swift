@@ -21,36 +21,10 @@ final class WindowClassifier {
     private var verdicts: [CGWindowID: Bool] = [:]
     /// PID -> bundle identifier, looked up once per process.
     private var bundles: [pid_t: String?] = [:]
-
-    /// Apple utility surfaces that behave like overlays rather than documents:
-    /// single-window, often fixed-size, and expected on top of the desktop
-    /// instead of taking a slot in the grid. Ported from the Go version's
-    /// `SystemFloatBundles` — matched as bundle id prefixes, so e.g. every
-    /// System Settings extension is covered by its parent.
-    private static let systemFloatBundles = [
-        "com.apple.systempreferences", // System Settings
-        "com.apple.SystemProfiler",    // About This Mac / System Information
-        "com.apple.ActivityMonitor",
-        "com.apple.AboutThisMacLauncher",
-        "com.apple.finder.SaveDialog",
-        "com.apple.KeychainAccess",
-        "com.apple.ScreenSharing",
-        "com.apple.screencaptureui",   // screenshot UI
-        "com.apple.controlcenter",
-        "com.apple.notificationcenterui",
-        "com.apple.PhotoBooth",
-        "com.apple.Dictionary",
-        "com.apple.calculator",
-        "com.apple.ColorSyncUtility",
-        "com.apple.AirPortBaseStationAgent",
-        "com.apple.print",             // print dialogs / Printer Setup
-        "com.apple.DiskUtility",
-        "com.apple.audio.AudioMIDISetup",
-        "com.apple.appkit.xpc.openAndSavePanelService",
-        "com.apple.SecurityAgent",
-        "com.apple.coreservices.uiagent",
-        "com.apple.UserNotificationCenter",
-    ]
+    /// PID -> executable name, for matching unbundled processes.
+    private var processNames: [pid_t: String] = [:]
+    /// PID -> all identities matched against the exclusion list.
+    private var identityCache: [pid_t: [String]] = [:]
 
     /// Whether `window` should take a slot in the layout.
     ///
@@ -76,9 +50,11 @@ final class WindowClassifier {
             return false
         }
 
-        let bundle = bundleIdentifier(for: window.pid)
-        if let bundle, Self.systemFloatBundles.contains(where: { bundle.hasPrefix($0) }) {
-            verdicts[window.id] = false
+        // The user's exclusion list, which by default holds Apple's utility
+        // surfaces (see `TilingExclusions.defaults`). Checked before the cache so editing
+        // it in Settings takes effect on the next pass, in both directions.
+        if TilingExclusions.isExcluded(ExcludedApps.list,
+                                       identities: identities(for: window)) {
             return false
         }
 
@@ -123,7 +99,37 @@ final class WindowClassifier {
     func retain(only live: Set<CGWindowID>, pids: Set<pid_t>) {
         verdicts = verdicts.filter { live.contains($0.key) }
         bundles = bundles.filter { pids.contains($0.key) }
+        processNames = processNames.filter { pids.contains($0.key) }
+        identityCache = identityCache.filter { pids.contains($0.key) }
         resolver.retainApps(only: pids)
+    }
+
+    /// Every name the window's process goes by, for the exclusion list: its
+    /// bundle ID, the bundle IDs of apps it is nested inside, and its
+    /// executable name. Cached per process.
+    private func identities(for window: ManagedWindow) -> [String] {
+        if let cached = identityCache[window.pid] { return cached }
+        var names: [String] = []
+        let app = NSRunningApplication(processIdentifier: window.pid)
+        if let id = app?.bundleIdentifier { names.append(id) }
+        if let path = app?.bundleURL?.path {
+            names += TilingExclusions.enclosingAppPaths(of: path)
+                .compactMap { Bundle(path: $0)?.bundleIdentifier }
+        }
+        if let name = processName(for: window) { names.append(name) }
+        identityCache[window.pid] = names
+        return names
+    }
+
+    /// The executable's file name — what identifies a process with no bundle,
+    /// such as a command-line tool that opens a window. Falls back to the
+    /// CGWindowList owner name, which is the same string for such processes.
+    private func processName(for window: ManagedWindow) -> String? {
+        if let cached = processNames[window.pid] { return cached }
+        let name = NSRunningApplication(processIdentifier: window.pid)?
+            .executableURL?.lastPathComponent ?? window.ownerName
+        processNames[window.pid] = name
+        return name
     }
 
     private func bundleIdentifier(for pid: pid_t) -> String? {

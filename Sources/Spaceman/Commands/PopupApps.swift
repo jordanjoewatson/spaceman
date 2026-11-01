@@ -30,3 +30,12 @@ enum PopupApps {
         return false
     }
 }
+
+/// The live tiling exclusion list, synced from `tiling.excludedApps` whenever
+/// preferences change so the classifier never decodes JSON per window.
+@MainActor
+enum ExcludedApps {
+    static var list: [ExcludedApp] = []
+
+    static func sync(_ apps: [ExcludedApp]) { list = apps }
+}

@@ -282,6 +282,8 @@ private struct TilingPane: View {
                 }
             }
 
+            ExcludedAppsSection(preferences: preferences)
+
             Section {
                 Toggle("Animate window moves", isOn: Binding(
                     get: { preferences[Defaults.animationEnabled] },
@@ -304,6 +306,93 @@ private struct TilingPane: View {
         }
         .formStyle(.grouped)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// Apps whose windows Spaceman never tiles, moves or resizes. Matched by
+/// bundle ID, or by executable name for processes without a bundle.
+private struct ExcludedAppsSection: View {
+    @ObservedObject var preferences: Preferences
+
+    var body: some View {
+        Section {
+            ForEach(preferences.excludedApps) { app in
+                HStack {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(app.name)
+                        Text(app.identifier)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button {
+                        preferences.excludedApps.removeAll { $0.identifier == app.identifier }
+                    } label: {
+                        Image(systemName: "minus.circle")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Tile this app again")
+                }
+            }
+
+            HStack(spacing: 12) {
+                Menu("Add Running App") {
+                    ForEach(runningApps, id: \.identifier) { app in
+                        Button(app.name) { add(app) }
+                    }
+                }
+                .fixedSize()
+                Button("Browse…", action: browse)
+            }
+        } header: {
+            Text("Excluded apps")
+        } footer: {
+            Text("Windows of these apps are never tiled, moved or resized. "
+                 + "Changes apply immediately.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// Regular (Dock) apps not already listed. Unbundled processes appear by
+    /// executable name.
+    private var runningApps: [ExcludedApp] {
+        let mine = ProcessInfo.processInfo.processIdentifier
+        var seen = Set(preferences.excludedApps.map { $0.identifier.lowercased() })
+        return NSWorkspace.shared.runningApplications
+            .filter { $0.activationPolicy == .regular && $0.processIdentifier != mine }
+            .compactMap { app -> ExcludedApp? in
+                guard let id = app.bundleIdentifier ?? app.executableURL?.lastPathComponent,
+                      seen.insert(id.lowercased()).inserted else { return nil }
+                return ExcludedApp(identifier: id, name: app.localizedName ?? id)
+            }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private func browse() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.application]
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.message = "Choose an application Spaceman should never tile"
+        panel.prompt = "Exclude"
+        guard panel.runModal() == .OK, let url = panel.url,
+              let bundle = Bundle(url: url),
+              let id = bundle.bundleIdentifier else { return }
+        let name = FileManager.default.displayName(atPath: url.path)
+            .replacingOccurrences(of: ".app", with: "")
+        add(ExcludedApp(identifier: id, name: name))
+    }
+
+    private func add(_ app: ExcludedApp) {
+        var list = preferences.excludedApps
+        guard !list.contains(where: {
+            $0.identifier.caseInsensitiveCompare(app.identifier) == .orderedSame
+        }) else { return }
+        list.append(app)
+        preferences.excludedApps = list
     }
 }
 

@@ -160,6 +160,12 @@ final class Preferences: ObservableObject {
         set { self[Defaults.appShortcuts] = AppShortcut.encodeList(newValue) }
     }
 
+    /// Apps never tiled, moved or resized. JSON in `tiling.excludedApps`.
+    var excludedApps: [ExcludedApp] {
+        get { TilingExclusions.decode(self[Defaults.excludedApps]) }
+        set { self[Defaults.excludedApps] = TilingExclusions.encode(newValue) }
+    }
+
     /// Per-display vertical nudges for the top and bottom bars.
     var barDisplayOffsets: [String: DisplayBarOffsets] {
         get { DisplayBarOffsetStore.decode(self[Defaults.barDisplayOffsets]) }

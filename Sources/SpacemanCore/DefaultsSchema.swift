@@ -46,6 +46,11 @@ public enum Defaults {
     public static let zoomFraction = DefaultsKey<Double>("tiling.zoomFraction", 0.8)
     /// Layout a Space starts in, as a `LayoutMode(userInput:)` spelling.
     public static let defaultLayout = DefaultsKey<String>("tiling.defaultLayout", "spaceman")
+    /// Apps whose windows are never tiled, moved or resized, as a JSON array
+    /// of `ExcludedApp`. Defaults to Apple's utility surfaces (Settings,
+    /// Calculator, Open/Save panels…); no third-party apps.
+    public static let excludedApps = DefaultsKey<String>(
+        "tiling.excludedApps", TilingExclusions.encode(TilingExclusions.defaults))
 
     // MARK: - Focus
 
@@ -109,6 +114,7 @@ public enum Defaults {
             masterRatio.name: masterRatio.fallback,
             zoomFraction.name: zoomFraction.fallback,
             defaultLayout.name: defaultLayout.fallback,
+            excludedApps.name: excludedApps.fallback,
             followMouse.name: followMouse.fallback,
             hoverSeconds.name: hoverSeconds.fallback,
             animationEnabled.name: animationEnabled.fallback,

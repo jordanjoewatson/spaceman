@@ -76,6 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // item and `defaults write` drive the same path.
             self.mouseFocus?.sync()
             PopupApps.sync(self.preferences.appShortcuts)
+            ExcludedApps.sync(self.preferences.excludedApps)
             self.tiler.tileNow()
         }
 
@@ -103,6 +104,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mouseFocus.sync()
 
         PopupApps.sync(preferences.appShortcuts)
+        ExcludedApps.sync(preferences.excludedApps)
         installStatusItem()
         installHotkeys()
 
