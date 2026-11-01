@@ -68,6 +68,8 @@ struct BarsPane: View {
             .pickerStyle(.segmented)
             .labelsHidden()
 
+            barVisibilityToggles
+
             edgeRevealToggle
 
             offsetsSection
@@ -141,6 +143,22 @@ struct BarsPane: View {
 
     private func layout(for edge: BarEdge) -> BarLayout {
         edge == .top ? selected.top : selected.bottom
+    }
+
+    /// Which bars exist at all. Global rather than per preset: switching presets
+    /// restyles the bars, it should not make one appear or vanish.
+    private var barVisibilityToggles: some View {
+        HStack(spacing: 16) {
+            Toggle("Show top bar", isOn: Binding(
+                get: { preferences[Defaults.barTopEnabled] },
+                set: { preferences[Defaults.barTopEnabled] = $0 }
+            ))
+            Toggle("Show bottom bar", isOn: Binding(
+                get: { preferences[Defaults.barBottomEnabled] },
+                set: { preferences[Defaults.barBottomEnabled] = $0 }
+            ))
+        }
+        .help("A hidden bar is not drawn, and tiled windows take back its space")
     }
 
     private var edgeRevealToggle: some View {

@@ -26,6 +26,9 @@ final class BarController {
     /// that window's zones are the only candidates.
     private var routers: [ObjectIdentifier: ZoneScrollRouter] = [:]
     private var lastScreens: [ScreenSnapshot] = []
+    /// Screens the current bars were built for. Not `topBars.count`: with a bar
+    /// turned off its array is empty whatever the screen count.
+    private var builtScreenCount = 0
     private var lastOffsetsJSON: String
     /// Reveal state is per display: a pointer at the bottom edge of one screen
     /// hides only that screen's bottom bar.
@@ -50,7 +53,7 @@ final class BarController {
          onGrowMaster: @escaping () -> Void) {
         self.state = state
         self.preferences = preferences
-        self.lastGeometry = BarGeometrySignature(preferences.activeBarPreset)
+        self.lastGeometry = BarGeometrySignature(preferences)
         self.lastOffsetsJSON = preferences[Defaults.barDisplayOffsets]
         self.onCycleLayout = onCycleLayout
         self.onRetile = onRetile
@@ -104,6 +107,8 @@ final class BarController {
 
         routers.removeAll()
         let preset = preferences.activeBarPreset
+        let showTop = preferences[Defaults.barTopEnabled]
+        let showBottom = preferences[Defaults.barBottomEnabled]
 
         for screen in NSScreen.screens {
             let context = BarContext(state: state,
@@ -114,13 +119,16 @@ final class BarController {
                                      onShrinkMaster: onShrinkMaster,
                                      onGrowMaster: onGrowMaster)
 
-            let top = makeBar(edge: .top, layout: preset.top, context: context, on: screen)
-            topBars.append(top)
-
-            let bottom = makeBar(edge: .bottom, layout: preset.bottom,
-                                 context: context, on: screen)
-            bottomBars.append(bottom)
+            if showTop {
+                topBars.append(makeBar(edge: .top, layout: preset.top,
+                                       context: context, on: screen))
+            }
+            if showBottom {
+                bottomBars.append(makeBar(edge: .bottom, layout: preset.bottom,
+                                          context: context, on: screen))
+            }
         }
+        builtScreenCount = NSScreen.screens.count
         lastScreens = NSScreen.screens.map(ScreenSnapshot.init)
         lastOffsetsJSON = preferences[Defaults.barDisplayOffsets]
         revealByDisplay = revealByDisplay.filter { entry in
@@ -143,7 +151,7 @@ final class BarController {
     private func applyScreenChange(_ current: [ScreenSnapshot]) {
         let idsChanged = current.map(\.id) != lastScreens.map(\.id)
         lastScreens = current
-        if idsChanged || current.count != topBars.count {
+        if idsChanged || current.count != builtScreenCount {
             rebuild(onCycleLayout: onCycleLayout,
                     onRetile: onRetile,
                     onShrinkMaster: onShrinkMaster,
@@ -204,8 +212,10 @@ final class BarController {
     func tilingArea(on screen: NSScreen) -> CGRect {
         let preset = preferences.activeBarPreset
         var area = screen.visibleFrame
-        let bottom = reserved(edge: .bottom, layout: preset.bottom, on: screen)
-        let top = reserved(edge: .top, layout: preset.top, on: screen)
+        let bottom = preferences[Defaults.barBottomEnabled]
+            ? reserved(edge: .bottom, layout: preset.bottom, on: screen) : 0
+        let top = preferences[Defaults.barTopEnabled]
+            ? reserved(edge: .top, layout: preset.top, on: screen) : 0
         area.origin.y += bottom
         area.size.height -= top + bottom
         return area
@@ -275,7 +285,7 @@ final class BarController {
     }
 
     private func presetGeometryChanged() {
-        let signature = BarGeometrySignature(preferences.activeBarPreset)
+        let signature = BarGeometrySignature(preferences)
         guard signature != lastGeometry else { return }
         lastGeometry = signature
         rebuild(onCycleLayout: onCycleLayout,
@@ -288,13 +298,20 @@ final class BarController {
 
 /// The parts of a preset that are baked into a window when it is created, so a
 /// change to any of them means the bars must be rebuilt rather than repainted.
+/// Which bars are enabled is included: turning one on or off is a rebuild too.
+@MainActor
 private struct BarGeometrySignature: Equatable {
+    let topEnabled: Bool
+    let bottomEnabled: Bool
     let topHeight: Double
     let topFloating: Bool
     let bottomHeight: Double
     let bottomFloating: Bool
 
-    init(_ preset: BarPreset) {
+    init(_ preferences: Preferences) {
+        let preset = preferences.activeBarPreset
+        topEnabled = preferences[Defaults.barTopEnabled]
+        bottomEnabled = preferences[Defaults.barBottomEnabled]
         topHeight = preset.top.height
         topFloating = preset.top.floating
         bottomHeight = preset.bottom.height

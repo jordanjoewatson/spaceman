@@ -20,6 +20,7 @@ struct DefaultsSchemaTests {
     ]
     private let boolKeys: [DefaultsKey<Bool>] = [
         Defaults.animationEnabled, Defaults.followMouse, Defaults.barEdgeReveal,
+        Defaults.barTopEnabled, Defaults.barBottomEnabled,
     ]
 
     @Test("every declared key has a registered default")

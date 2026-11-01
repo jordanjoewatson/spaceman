@@ -7,6 +7,10 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+### Added
+
+- Settings to show or hide the top and bottom status bars independently; a hidden bar's space goes back to tiled windows.
+
 ## [1.0.0] - 2026-09-26
 
 ### Added

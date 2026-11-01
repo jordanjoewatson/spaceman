@@ -76,6 +76,10 @@ public enum Defaults {
     public static let barDisplayOffsets = DefaultsKey<String>("bar.displayOffsets", "{}")
     /// Slide a bar out of the way when the pointer hits that screen edge.
     public static let barEdgeReveal = DefaultsKey<Bool>("bar.edgeReveal", true)
+    /// Whether each bar is shown at all. Off means no window and no reserved
+    /// space: the tiling area grows into where the bar would have been.
+    public static let barTopEnabled = DefaultsKey<Bool>("bar.showTop", true)
+    public static let barBottomEnabled = DefaultsKey<Bool>("bar.showBottom", true)
 
     // MARK: - Palette
 
@@ -113,6 +117,8 @@ public enum Defaults {
             barCustomPresets.name: barCustomPresets.fallback,
             barDisplayOffsets.name: barDisplayOffsets.fallback,
             barEdgeReveal.name: barEdgeReveal.fallback,
+            barTopEnabled.name: barTopEnabled.fallback,
+            barBottomEnabled.name: barBottomEnabled.fallback,
             palette.name: palette.fallback,
             customPalettes.name: customPalettes.fallback,
             appShortcuts.name: appShortcuts.fallback,
