@@ -132,6 +132,11 @@ public enum PluginSceneStyle: Sendable {
     /// Right for something small and glanceable. A title bar on a panel that
     /// exists to show one number is most of its height spent on nothing.
     case panel
+    /// A borderless window covering the whole main display, above the menu
+    /// bar, the status bars and other apps' fullscreen Spaces. For a "10-foot"
+    /// surface such as Lounge. The plugin's content handles every input,
+    /// including how to leave: Escape does not close it.
+    case fullscreen
 }
 
 /// A window a plugin owns.
@@ -311,6 +316,22 @@ public protocol PluginHost: AnyObject {
     /// behaviour for a chord that summons a panel: the same keys should put it
     /// away again.
     func toggleScene(_ id: String)
+
+    /// Close a scene's window if it is open. Kept, not destroyed, so the next
+    /// `showScene` returns the same window.
+    func hideScene(_ id: String)
+
+    /// Whether a scene's window is currently on screen.
+    func isSceneVisible(_ id: String) -> Bool
+
+    /// Ask the tiler to leave an app's windows alone (or stop asking). Uses
+    /// the same matching as the user's exclusion list, but is runtime-only:
+    /// it is never saved and never appears in Settings.
+    func setTilingExempt(bundleID: String, _ exempt: Bool)
+
+    /// Move one Space left or right on the active display, the same as the
+    /// system's ⌃← / ⌃→ Mission Control shortcuts.
+    func switchSpace(_ direction: PluginDirection)
 
     /// A colour from the user's active palette.
     ///

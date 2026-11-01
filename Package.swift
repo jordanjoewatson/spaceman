@@ -29,6 +29,7 @@ let knownPlugins: [(name: String, target: String)] = [
     ("swap", "SwapPlugin"),
     ("pomodoro", "PomodoroPlugin"),
     ("clipboard", "ClipboardPlugin"),
+    ("lounge", "LoungePlugin"),
 ]
 
 func parseList(_ raw: String?) -> [String]? {

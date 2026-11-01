@@ -53,7 +53,7 @@ final class WindowClassifier {
         // The user's exclusion list, which by default holds Apple's utility
         // surfaces (see `TilingExclusions.defaults`). Checked before the cache so editing
         // it in Settings takes effect on the next pass, in both directions.
-        if TilingExclusions.isExcluded(ExcludedApps.list,
+        if TilingExclusions.isExcluded(ExcludedApps.effective,
                                        identities: identities(for: window)) {
             return false
         }

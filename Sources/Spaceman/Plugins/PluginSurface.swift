@@ -80,6 +80,11 @@ final class PluginSurface: ObservableObject {
 
         let window = windows[id] ?? makeWindow(for: scene)
         windows[id] = window
+        // Displays come and go (a TV switched on), so a fullscreen scene is
+        // fitted to the current main display each time it is shown.
+        if scene.style == .fullscreen, let screen = NSScreen.main {
+            window.setFrame(screen.frame, display: true)
+        }
         NSApp.activate()
         window.makeKeyAndOrderFront(nil)
     }
@@ -94,6 +99,14 @@ final class PluginSurface: ObservableObject {
             return
         }
         showScene(id)
+    }
+
+    func hideScene(_ id: String) {
+        windows[id]?.orderOut(nil)
+    }
+
+    func isSceneVisible(_ id: String) -> Bool {
+        windows[id]?.isVisible ?? false
     }
 
     private func makeWindow(for scene: PluginScene) -> NSWindow {
@@ -134,6 +147,23 @@ final class PluginSurface: ObservableObject {
             hosting.layer?.cornerCurve = .continuous
             hosting.layer?.masksToBounds = true
             window.contentView = hosting
+
+        case .fullscreen:
+            let frame = NSScreen.main?.frame ?? CGRect(origin: .zero, size: scene.defaultSize)
+            window = PluginFullscreenWindow(contentRect: frame,
+                                            styleMask: [.borderless],
+                                            backing: .buffered,
+                                            defer: false)
+            window.isOpaque = true
+            window.backgroundColor = .black
+            // Above the menu bar and the status bars (both at main-menu level).
+            window.level = .screenSaver
+            // On every Space, including other apps' fullscreen Spaces, so it can
+            // be summoned over a game without switching Spaces first.
+            window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+            window.isReleasedWhenClosed = false
+            window.contentView = NSHostingView(rootView: scene.content())
+            return window
         }
 
         window.contentMinSize = scene.minSize
@@ -163,4 +193,12 @@ private final class PluginPanel: NSPanel {
     override func cancelOperation(_ sender: Any?) {
         orderOut(nil)
     }
+}
+
+/// A fullscreen plugin surface. Borderless, so key status must be granted
+/// explicitly; Escape is left to the content, which owns how to leave.
+private final class PluginFullscreenWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+    override func cancelOperation(_ sender: Any?) {}
 }

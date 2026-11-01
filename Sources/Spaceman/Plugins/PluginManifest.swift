@@ -16,6 +16,10 @@ import PomodoroPlugin
 import ClipboardPlugin
 #endif
 
+#if canImport(LoungePlugin)
+import LoungePlugin
+#endif
+
 /// The build manifest: every plugin this binary carries, one entry per
 /// selected plugin target. `canImport` is the Swift counterpart of the Go
 /// version's blank-import list — Package.swift only declares the dependency
@@ -38,6 +42,9 @@ enum PluginManifest {
         #endif
         #if canImport(ClipboardPlugin)
         all.append(ClipboardPlugin.self)
+        #endif
+        #if canImport(LoungePlugin)
+        all.append(LoungePlugin.self)
         #endif
         return all
     }()

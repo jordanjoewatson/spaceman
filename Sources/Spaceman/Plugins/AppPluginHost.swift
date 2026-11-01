@@ -116,6 +116,36 @@ final class AppPluginHost: PluginHost {
         PluginSurface.shared.toggleScene(id)
     }
 
+    func hideScene(_ id: String) {
+        PluginSurface.shared.hideScene(id)
+    }
+
+    func isSceneVisible(_ id: String) -> Bool {
+        PluginSurface.shared.isSceneVisible(id)
+    }
+
+    func setTilingExempt(bundleID: String, _ exempt: Bool) {
+        ExcludedApps.setPluginExempt(bundleID, exempt)
+    }
+
+    /// Spaceman has no Space-switching command of its own, so this posts the
+    /// system's "Move left/right a space" shortcut (⌃← / ⌃→, on by default in
+    /// Keyboard ▸ Shortcuts ▸ Mission Control). Up and down are ignored.
+    func switchSpace(_ direction: PluginDirection) {
+        let keyCode: CGKeyCode
+        switch direction {
+        case .left:  keyCode = 123
+        case .right: keyCode = 124
+        case .up, .down: return
+        }
+        let source = CGEventSource(stateID: .hidSystemState)
+        for down in [true, false] {
+            let event = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: down)
+            event?.flags = [.maskControl, .maskSecondaryFn, .maskNumericPad]
+            event?.post(tap: .cghidEventTap)
+        }
+    }
+
     /// Resolved against the active palette, so a plugin panel follows the theme
     /// the user picked rather than painting its own colours.
     func color(_ role: PluginColorRole) -> NSColor {

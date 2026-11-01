@@ -37,5 +37,18 @@ enum PopupApps {
 enum ExcludedApps {
     static var list: [ExcludedApp] = []
 
+    /// Bundle IDs a plugin has asked the tiler to leave alone for now (e.g.
+    /// Lounge's fullscreen games). Runtime-only: never written to preferences,
+    /// so it never shows up in, or edits, the user's own list.
+    private(set) static var pluginExempt: [ExcludedApp] = []
+
     static func sync(_ apps: [ExcludedApp]) { list = apps }
+
+    static func setPluginExempt(_ bundleID: String, _ exempt: Bool) {
+        pluginExempt.removeAll { $0.identifier.lowercased() == bundleID.lowercased() }
+        if exempt { pluginExempt.append(ExcludedApp(identifier: bundleID, name: bundleID)) }
+    }
+
+    /// Everything the classifier checks: the user's list plus plugin requests.
+    static var effective: [ExcludedApp] { list + pluginExempt }
 }

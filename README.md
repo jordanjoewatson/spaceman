@@ -67,7 +67,7 @@ Signing and notarization instructions are in [docs/RELEASING.md](docs/RELEASING.
 
 ## Plugins
 
-Plugins are selected at build time. The standard build includes the launcher, clipboard history, focus timer, and window swap plugins.
+Plugins are selected at build time. The standard build includes the launcher, clipboard history, focus timer, window swap, and [Lounge](docs/lounge.md) plugins.
 
 ```sh
 ./build-app.sh --list
@@ -75,6 +75,10 @@ Plugins are selected at build time. The standard build includes the launcher, cl
 ./build-app.sh --without pomodoro
 ./build-app.sh --core-only
 ```
+
+### Lounge and the controller home button
+
+[Lounge](docs/lounge.md) opens when you press the controller's home button (PS / Xbox / Guide). macOS also uses that button to open Games / Apple Arcade, so turn that off: **System Settings → Game Controllers →** select your controller **→** set the Home button so it doesn't open the Games app. The exact label varies between macOS versions.
 
 ## Project
 
