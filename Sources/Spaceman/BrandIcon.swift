@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The monochrome helmet mark, loaded from the app bundle.
+/// The monochrome Spaceman mark (StatusIcon.svg), loaded from the app bundle.
 ///
 /// Drawn as a template so the menu bar and the bar module tint it like an SF
 /// Symbol. Missing in a `swift run` binary (no Resources); those call sites
@@ -10,13 +10,10 @@ enum BrandIcon {
 
     static func nsImage(pointSize: CGFloat) -> NSImage? {
         guard let source = bundled else { return nil }
-        let size = NSSize(width: pointSize, height: pointSize)
-        let image = NSImage(size: size)
-        image.lockFocus()
-        NSGraphicsContext.current?.imageInterpolation = .high
-        source.draw(in: NSRect(origin: .zero, size: size),
-                    from: .zero, operation: .copy, fraction: 1)
-        image.unlockFocus()
+        // The mark is an SVG, so a resized copy stays vector and renders
+        // crisply at any backing scale.
+        guard let image = source.copy() as? NSImage else { return nil }
+        image.size = NSSize(width: pointSize, height: pointSize)
         image.isTemplate = true
         image.accessibilityDescription = "Spaceman"
         return image
@@ -47,7 +44,7 @@ enum BrandIcon {
     /// Dock icon. Falling back to AppIcon keeps `swift run` and older bundles
     /// usable when the status asset is absent.
     private static var bundled: NSImage? {
-        if let url = Bundle.main.url(forResource: "StatusIcon", withExtension: "png"),
+        if let url = Bundle.main.url(forResource: "StatusIcon", withExtension: "svg"),
            let image = NSImage(contentsOf: url) {
             return image
         }
