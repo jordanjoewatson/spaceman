@@ -7,6 +7,8 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-09-26
+
 ### Added
 
 - Six tiling layouts: grid, master stack, BSP, columns, rows, and monocle.
@@ -19,9 +21,4 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 - Focus-follows-mouse, animated window movement, and multi-display pointer navigation.
 - Build-time plugin selection and notarized release build support.
 
-## [1.0.0] - 26/09/2026
-
-- Initial release.
-
-[Unreleased]: https://github.com/jordanjoewatson/spaceman/commits/main
 [1.0.0]: https://github.com/jordanjoewatson/spaceman/releases/tag/v1.0.0
